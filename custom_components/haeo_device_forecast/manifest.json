@@ -1,0 +1,12 @@
+{
+  "domain": "haeo_device_forecast",
+  "name": "HAEO Device Forecast",
+  "codeowners": ["@rolfa"],
+  "config_flow": true,
+  "documentation": "https://github.com/rolfa/haeo-device-forecast",
+  "integration_type": "hub",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/rolfa/haeo-device-forecast/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

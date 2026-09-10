@@ -1,0 +1,16 @@
+# Home-Assistant-Testinstanz (wird von scripts/develop bzw. .devcontainer/setup.sh erzeugt)
+config/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.venv/
+
+# Editor
+.vscode/*
+!.vscode/extensions.json

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Startet eine lokale Home-Assistant-Instanz mit der Integration aus custom_components/
+# zum manuellen Testen im Browser (Port 8123, im Devcontainer weitergeleitet).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+export PYTHONPATH="${PYTHONPATH:-}:$(pwd)"
+
+mkdir -p config/custom_components
+ln -sfn "$(pwd)/custom_components/haeo_device_forecast" config/custom_components/haeo_device_forecast
+
+hass -c config --debug
