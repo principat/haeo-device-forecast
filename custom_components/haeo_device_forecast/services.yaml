@@ -1,0 +1,40 @@
+rename_profile:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: haeo_device_forecast
+    profile_id:
+      required: true
+      selector:
+        text:
+    name:
+      required: true
+      selector:
+        text:
+
+merge_profiles:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: haeo_device_forecast
+    profile_ids:
+      required: true
+      selector:
+        text:
+          multiple: true
+    name:
+      required: true
+      selector:
+        text:
+
+search_profiles:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: haeo_device_forecast
