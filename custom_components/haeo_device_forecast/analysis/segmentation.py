@@ -28,6 +28,17 @@ def detect_runs(
     Returns:
         Detected runs in chronological order. A run still in progress at
         the end of ``samples`` is included with ``ended_at=None``.
+
+    Note:
+        Home Assistant's recorder does not re-log an unchanged state, so a
+        device sitting idle for a long time typically produces exactly one
+        below-threshold sample, then nothing until the next real run
+        starts. The timeout is therefore checked against every incoming
+        sample's timestamp - including one that itself jumps back above
+        the threshold - not only against a later below-threshold sample;
+        otherwise a run could never close without an intervening
+        below-threshold reading, silently merging separate real runs
+        (potentially days apart) into one.
     """
     runs: list[DeviceRun] = []
     started_at = None
@@ -35,6 +46,20 @@ def detect_runs(
     below_since = None
 
     for sample in samples:
+        if started_at is not None and below_since is not None:
+            elapsed = (sample.timestamp - below_since).total_seconds()
+            if elapsed >= end_timeout_seconds:
+                runs.append(
+                    DeviceRun(
+                        started_at=started_at,
+                        ended_at=below_since,
+                        samples=tuple(s for s in run_samples if s.timestamp <= below_since),
+                    )
+                )
+                started_at = None
+                run_samples = []
+                below_since = None
+
         if started_at is None:
             if sample.value > start_threshold:
                 started_at = sample.timestamp
@@ -46,17 +71,6 @@ def detect_runs(
         if sample.value <= start_threshold:
             if below_since is None:
                 below_since = sample.timestamp
-            elif (sample.timestamp - below_since).total_seconds() >= end_timeout_seconds:
-                runs.append(
-                    DeviceRun(
-                        started_at=started_at,
-                        ended_at=below_since,
-                        samples=tuple(s for s in run_samples if s.timestamp <= below_since),
-                    )
-                )
-                started_at = None
-                run_samples = []
-                below_since = None
         else:
             below_since = None
 

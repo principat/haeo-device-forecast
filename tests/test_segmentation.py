@@ -84,6 +84,31 @@ def test_multiple_separate_runs_are_detected() -> None:
     assert runs[1].ended_at == T0 + timedelta(seconds=310)
 
 
+def test_run_ends_even_when_no_below_threshold_sample_follows_the_gap() -> None:
+    # Regression test: Home Assistant's recorder does not re-log an
+    # unchanged state, so a device sitting idle for days produces exactly
+    # one below-threshold sample, then nothing until the next real run
+    # starts (a sample straight back ABOVE threshold, with no intervening
+    # below-threshold sample to trigger the elapsed-time check). The first
+    # run must still be closed at the idle sample, not merged with the
+    # next run just because no further below-threshold reading arrived.
+    samples = _samples(
+        (50.0, 0),  # run 1 starts
+        (60.0, 10),
+        (0.0, 20),  # drops to idle - last sample recorded before a long gap
+        (55.0, 100_000),  # run 2 starts directly, >>60s timeout later, no dip in between
+        (60.0, 100_010),
+    )
+
+    runs = detect_runs(samples, start_threshold=5.0, end_timeout_seconds=60)
+
+    assert len(runs) == 2
+    assert runs[0].started_at == T0
+    assert runs[0].ended_at == T0 + timedelta(seconds=20)
+    assert runs[1].started_at == T0 + timedelta(seconds=100_000)
+    assert runs[1].ended_at is None
+
+
 def test_real_geschirrspueler_fixture_detects_one_open_run() -> None:
     pairs = fixture_timestamps("geschirrspueler_run.json")
     samples = [
