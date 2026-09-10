@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.haeo_device_forecast.const import DOMAIN
 from custom_components.haeo_device_forecast.coordinator import (
     STATUS_RUNNING,
     STATUS_SLEEPING,
@@ -107,3 +108,25 @@ async def test_sensors_have_stable_unique_ids_per_entry(hass) -> None:
 
     assert sensor_a.unique_id == sensor_b.unique_id
     assert coordinator.config_entry.entry_id in sensor_a.unique_id
+
+
+async def test_sensors_are_namespaced_by_device_to_avoid_cross_device_collisions(
+    hass,
+) -> None:
+    # Specs.md requires supporting ~10 devices at once; without a device
+    # per config entry, has_entity_name would collapse every device's
+    # "Status" sensor to the same generic entity_id (sensor.status).
+    coordinator = await _make_coordinator(hass)
+    coordinator.data = DeviceForecastData(
+        status=STATUS_SLEEPING,
+        profile_name=None,
+        confidence_percent=None,
+        current_power=None,
+        estimated_end=None,
+        forecast=[],
+    )
+
+    sensor = StatusSensor(coordinator)
+
+    assert sensor.device_info is not None
+    assert (DOMAIN, coordinator.config_entry.entry_id) in sensor.device_info["identifiers"]
