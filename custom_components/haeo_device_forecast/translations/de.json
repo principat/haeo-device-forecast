@@ -2,11 +2,39 @@
   "config": {
     "step": {
       "user": {
-        "data": {
-          "name": "Name",
-          "power_entity_id": "Leistungssensor",
-          "start_threshold": "Startschwelle (W)",
-          "bucket_seconds": "Band-Bucket-Breite (s)"
+        "title": "HAEO Device Forecast einrichten",
+        "description": "Legt den zentralen Eintrag an. Anschließend jedes zu überwachende Gerät (dessen Leistungssensor) über \"Gerät hinzufügen\" auf der Integrationsseite ergänzen."
+      }
+    },
+    "abort": {
+      "already_configured": "HAEO Device Forecast ist bereits eingerichtet. Weitere Geräte über \"Gerät hinzufügen\" auf der Integrationsseite ergänzen."
+    }
+  },
+  "config_subentries": {
+    "device": {
+      "entry_type": "Gerät",
+      "initiate_flow": {
+        "user": "Gerät hinzufügen",
+        "reconfigure": "Gerät bearbeiten"
+      },
+      "step": {
+        "user": {
+          "title": "Gerät hinzufügen",
+          "data": {
+            "name": "Name",
+            "power_entity_id": "Leistungssensor",
+            "start_threshold": "Startschwelle (W)",
+            "bucket_seconds": "Band-Bucket-Breite (s)"
+          }
+        },
+        "reconfigure": {
+          "title": "Gerät bearbeiten",
+          "data": {
+            "name": "Name",
+            "power_entity_id": "Leistungssensor",
+            "start_threshold": "Startschwelle (W)",
+            "bucket_seconds": "Band-Bucket-Breite (s)"
+          }
         }
       }
     }
@@ -32,6 +60,11 @@
       "known_profiles": {
         "name": "Bekannte Profile"
       }
+    },
+    "button": {
+      "search_profiles": {
+        "name": "Nach neuen Profilen suchen"
+      }
     }
   },
   "services": {
@@ -39,7 +72,7 @@
       "name": "Profil umbenennen",
       "description": "Benennt eines der erkannten Lastprofile eines Geräts um.",
       "fields": {
-        "config_entry_id": {
+        "device_id": {
           "name": "Gerät",
           "description": "Das HAEO-Device-Forecast-Gerät."
         },
@@ -57,7 +90,7 @@
       "name": "Profile zusammenführen",
       "description": "Führt zwei oder mehr Profile eines Geräts zu einem zusammen und erweitert dabei dessen gelerntes Band.",
       "fields": {
-        "config_entry_id": {
+        "device_id": {
           "name": "Gerät",
           "description": "Das HAEO-Device-Forecast-Gerät."
         },
@@ -75,7 +108,7 @@
       "name": "Nach neuen Profilen suchen",
       "description": "Führt die automatische Profilerkennung erneut über alle gespeicherten Rohdaten eines Geräts aus.",
       "fields": {
-        "config_entry_id": {
+        "device_id": {
           "name": "Gerät",
           "description": "Das HAEO-Device-Forecast-Gerät."
         }

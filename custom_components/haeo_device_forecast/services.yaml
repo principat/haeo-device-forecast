@@ -1,10 +1,11 @@
 rename_profile:
   fields:
-    config_entry_id:
+    device_id:
       required: true
       selector:
-        config_entry:
-          integration: haeo_device_forecast
+        device:
+          filter:
+            integration: haeo_device_forecast
     profile_id:
       required: true
       selector:
@@ -16,11 +17,12 @@ rename_profile:
 
 merge_profiles:
   fields:
-    config_entry_id:
+    device_id:
       required: true
       selector:
-        config_entry:
-          integration: haeo_device_forecast
+        device:
+          filter:
+            integration: haeo_device_forecast
     profile_ids:
       required: true
       selector:
@@ -33,8 +35,9 @@ merge_profiles:
 
 search_profiles:
   fields:
-    config_entry_id:
+    device_id:
       required: true
       selector:
-        config_entry:
-          integration: haeo_device_forecast
+        device:
+          filter:
+            integration: haeo_device_forecast

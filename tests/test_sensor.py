@@ -24,21 +24,22 @@ from custom_components.haeo_device_forecast.sensor import (
 from custom_components.haeo_device_forecast.storage import DeviceStore
 
 ENTITY_ID = "sensor.test_power"
+SUBENTRY_ID = "subentry1"
 
 
 async def _make_coordinator(hass) -> DeviceForecastCoordinator:
-    entry = MockConfigEntry(domain="haeo_device_forecast", data={"power_entity_id": ENTITY_ID})
-    store = DeviceStore(hass, entry_id=entry.entry_id)
-    coordinator = DeviceForecastCoordinator(
+    entry = MockConfigEntry(domain="haeo_device_forecast", data={})
+    store = DeviceStore(hass, device_id=SUBENTRY_ID)
+    return DeviceForecastCoordinator(
         hass,
         config_entry=entry,
+        subentry_id=SUBENTRY_ID,
+        device_name="Testgerät",
         power_entity_id=ENTITY_ID,
         start_threshold=5.0,
         store=store,
         bucket_seconds=10,
     )
-    coordinator.config_entry = entry
-    return coordinator
 
 
 async def test_sensors_reflect_sleeping_state(hass) -> None:
@@ -94,7 +95,7 @@ async def test_sensors_reflect_running_state_with_forecast(hass) -> None:
     assert confidence_sensor.native_unit_of_measurement == "%"
 
 
-async def test_sensors_have_stable_unique_ids_per_entry(hass) -> None:
+async def test_sensors_have_stable_unique_ids_per_device(hass) -> None:
     coordinator = await _make_coordinator(hass)
     coordinator.data = DeviceForecastData(
         status=STATUS_SLEEPING,
@@ -109,14 +110,14 @@ async def test_sensors_have_stable_unique_ids_per_entry(hass) -> None:
     sensor_b = ForecastPowerSensor(coordinator)
 
     assert sensor_a.unique_id == sensor_b.unique_id
-    assert coordinator.config_entry.entry_id in sensor_a.unique_id
+    assert SUBENTRY_ID in sensor_a.unique_id
 
 
 async def test_sensors_are_namespaced_by_device_to_avoid_cross_device_collisions(
     hass,
 ) -> None:
     # Specs.md requires supporting ~10 devices at once; without a device
-    # per config entry, has_entity_name would collapse every device's
+    # per config subentry, has_entity_name would collapse every device's
     # "Status" sensor to the same generic entity_id (sensor.status).
     coordinator = await _make_coordinator(hass)
     coordinator.data = DeviceForecastData(
@@ -131,7 +132,8 @@ async def test_sensors_are_namespaced_by_device_to_avoid_cross_device_collisions
     sensor = StatusSensor(coordinator)
 
     assert sensor.device_info is not None
-    assert (DOMAIN, coordinator.config_entry.entry_id) in sensor.device_info["identifiers"]
+    assert (DOMAIN, SUBENTRY_ID) in sensor.device_info["identifiers"]
+    assert sensor.device_info["name"] == "Testgerät"
 
 
 async def test_known_profiles_sensor_lists_all_learned_profiles(hass) -> None:

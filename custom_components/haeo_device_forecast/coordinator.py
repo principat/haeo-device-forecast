@@ -91,6 +91,8 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
         self,
         hass: HomeAssistant,
         config_entry: ConfigEntry,
+        subentry_id: str,
+        device_name: str,
         power_entity_id: str,
         start_threshold: float,
         store: DeviceStore,
@@ -101,7 +103,14 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
 
         Args:
             hass: The Home Assistant instance.
-            config_entry: The config entry this coordinator belongs to.
+            config_entry: The (single, hub) config entry this coordinator's
+                device is managed under.
+            subentry_id: Id of the config subentry representing this device -
+                its stable identity for storage keys, unique ids and the
+                registered HA device (Specs.md: one hub entry manages
+                multiple devices as config subentries).
+            device_name: User-chosen name of this device, used as the HA
+                device's display name.
             power_entity_id: Entity id of the device's power sensor.
             start_threshold: Power (W) above which a run is considered started.
             store: Long-term storage for this device's profiles/raw samples.
@@ -112,9 +121,11 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
             hass,
             _LOGGER,
             config_entry=config_entry,
-            name=f"HAEO Device Forecast ({power_entity_id})",
+            name=f"HAEO Device Forecast ({device_name})",
             update_interval=update_interval,
         )
+        self.subentry_id = subentry_id
+        self.device_name = device_name
         self.power_entity_id = power_entity_id
         self.start_threshold = start_threshold
         self.bucket_seconds = bucket_seconds

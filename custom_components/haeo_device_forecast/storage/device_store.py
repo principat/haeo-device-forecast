@@ -51,9 +51,9 @@ class _ProfilesStore(Store[dict[str, Any]]):
 
 
 class DeviceStore:
-    """Long-term storage of raw samples and profiles for one config entry.
+    """Long-term storage of raw samples and profiles for one device.
 
-    One instance manages exactly one device (one config entry / power
+    One instance manages exactly one device (one config subentry / power
     sensor). Raw samples are append-only and retained indefinitely so the
     30-day analysis window can grow beyond the recorder's own retention.
     """
@@ -61,18 +61,18 @@ class DeviceStore:
     RAW_SAMPLES_VERSION = RAW_SAMPLES_STORAGE_VERSION
     PROFILES_VERSION = PROFILES_STORAGE_VERSION
 
-    def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
+    def __init__(self, hass: HomeAssistant, device_id: str) -> None:
         """Initialize storage handles for a device.
 
         Args:
             hass: The Home Assistant instance.
-            entry_id: The config entry id identifying the device.
+            device_id: The id identifying the device (its config subentry id).
         """
         self.raw_samples_store = _RawSamplesStore(
-            hass, RAW_SAMPLES_STORAGE_VERSION, f"{DOMAIN}_{entry_id}_raw_samples"
+            hass, RAW_SAMPLES_STORAGE_VERSION, f"{DOMAIN}_{device_id}_raw_samples"
         )
         self.profiles_store = _ProfilesStore(
-            hass, PROFILES_STORAGE_VERSION, f"{DOMAIN}_{entry_id}_profiles"
+            hass, PROFILES_STORAGE_VERSION, f"{DOMAIN}_{device_id}_profiles"
         )
 
     async def async_load_raw_samples(self) -> list[RawSample]:

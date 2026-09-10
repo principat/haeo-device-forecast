@@ -2,11 +2,39 @@
   "config": {
     "step": {
       "user": {
-        "data": {
-          "name": "Name",
-          "power_entity_id": "Power sensor",
-          "start_threshold": "Start threshold (W)",
-          "bucket_seconds": "Band bucket width (s)"
+        "title": "Set up HAEO Device Forecast",
+        "description": "Creates the hub. Afterwards, add each device to track (its power sensor) via \"Add device\" on the integration's page."
+      }
+    },
+    "abort": {
+      "already_configured": "HAEO Device Forecast is already set up. Add more devices via \"Add device\" on the integration's page."
+    }
+  },
+  "config_subentries": {
+    "device": {
+      "entry_type": "Device",
+      "initiate_flow": {
+        "user": "Add device",
+        "reconfigure": "Reconfigure device"
+      },
+      "step": {
+        "user": {
+          "title": "Add device",
+          "data": {
+            "name": "Name",
+            "power_entity_id": "Power sensor",
+            "start_threshold": "Start threshold (W)",
+            "bucket_seconds": "Band bucket width (s)"
+          }
+        },
+        "reconfigure": {
+          "title": "Reconfigure device",
+          "data": {
+            "name": "Name",
+            "power_entity_id": "Power sensor",
+            "start_threshold": "Start threshold (W)",
+            "bucket_seconds": "Band bucket width (s)"
+          }
         }
       }
     }
@@ -32,6 +60,11 @@
       "known_profiles": {
         "name": "Known profiles"
       }
+    },
+    "button": {
+      "search_profiles": {
+        "name": "Search for new profiles"
+      }
     }
   },
   "services": {
@@ -39,7 +72,7 @@
       "name": "Rename profile",
       "description": "Renames one of a device's recognized load profiles.",
       "fields": {
-        "config_entry_id": {
+        "device_id": {
           "name": "Device",
           "description": "The HAEO Device Forecast device."
         },
@@ -57,7 +90,7 @@
       "name": "Merge profiles",
       "description": "Merges two or more of a device's profiles into one, widening its learned band.",
       "fields": {
-        "config_entry_id": {
+        "device_id": {
           "name": "Device",
           "description": "The HAEO Device Forecast device."
         },
@@ -75,7 +108,7 @@
       "name": "Search for new profiles",
       "description": "Re-runs automatic profile discovery over all of a device's stored raw samples.",
       "fields": {
-        "config_entry_id": {
+        "device_id": {
           "name": "Device",
           "description": "The HAEO Device Forecast device."
         }

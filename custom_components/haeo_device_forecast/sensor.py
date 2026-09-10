@@ -19,57 +19,34 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfPower
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import DeviceForecastCoordinator
+from .entity import DeviceForecastEntity
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    """Set up the device's forecast, status, profile-name and confidence sensors."""
-    coordinator: DeviceForecastCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(
-        [
-            ForecastPowerSensor(coordinator),
-            StatusSensor(coordinator),
-            ProfileNameSensor(coordinator),
-            ConfidenceSensor(coordinator),
-            KnownProfilesSensor(coordinator),
-        ]
-    )
-
-
-class _DeviceForecastEntity(CoordinatorEntity[DeviceForecastCoordinator], SensorEntity):
-    """Common wiring for this integration's per-device sensors.
-
-    Registers a Home Assistant device per config entry so entity ids are
-    namespaced by device name (e.g. ``sensor.waschmaschine_status``)
-    instead of colliding across devices - Specs.md requires managing up to
-    ~10 devices at once.
-    """
-
-    _attr_has_entity_name = True
-
-    def __init__(self, coordinator: DeviceForecastCoordinator, key: str) -> None:
-        """Initialize the entity for one device's config entry.
-
-        Args:
-            coordinator: The device's live-tracking coordinator.
-            key: Unique suffix identifying this sensor within the device.
-        """
-        super().__init__(coordinator)
-        entry = coordinator.config_entry
-        self._attr_unique_id = f"{entry.entry_id}_{key}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.title,
-            manufacturer="HAEO Device Forecast",
+    """Set up the forecast/status/profile/confidence/known-profiles sensors for every device."""
+    coordinators: dict[str, DeviceForecastCoordinator] = hass.data[DOMAIN][entry.entry_id]
+    for subentry_id, coordinator in coordinators.items():
+        async_add_entities(
+            [
+                ForecastPowerSensor(coordinator),
+                StatusSensor(coordinator),
+                ProfileNameSensor(coordinator),
+                ConfidenceSensor(coordinator),
+                KnownProfilesSensor(coordinator),
+            ],
+            config_subentry_id=subentry_id,
         )
+
+
+class _DeviceForecastEntity(DeviceForecastEntity, SensorEntity):
+    """Common wiring for this integration's per-device sensors."""
 
 
 class ForecastPowerSensor(_DeviceForecastEntity):

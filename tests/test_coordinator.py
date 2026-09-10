@@ -18,11 +18,14 @@ ENTITY_ID = "sensor.test_power"
 
 
 async def _make_coordinator(hass) -> DeviceForecastCoordinator:
-    entry = MockConfigEntry(domain="haeo_device_forecast", data={"power_entity_id": ENTITY_ID})
-    store = DeviceStore(hass, entry_id=entry.entry_id)
+    entry = MockConfigEntry(domain="haeo_device_forecast", data={})
+    subentry_id = "subentry1"
+    store = DeviceStore(hass, device_id=subentry_id)
     return DeviceForecastCoordinator(
         hass,
         config_entry=entry,
+        subentry_id=subentry_id,
+        device_name="Testgerät",
         power_entity_id=ENTITY_ID,
         start_threshold=5.0,
         store=store,

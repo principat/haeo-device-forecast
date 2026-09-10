@@ -14,3 +14,7 @@ htmlcov/
 # Editor
 .vscode/*
 !.vscode/extensions.json
+
+# Claude Code (local/session-specific; .claude/settings.json is tracked)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock

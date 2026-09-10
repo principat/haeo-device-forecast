@@ -6,12 +6,14 @@ from datetime import datetime, timezone
 
 import pytest
 from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import device_registry as dr
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.haeo_device_forecast.config_flow import SUBENTRY_TYPE_DEVICE
 from custom_components.haeo_device_forecast.const import CONF_POWER_ENTITY_ID, DOMAIN
-from custom_components.haeo_device_forecast.models import Profile
+from custom_components.haeo_device_forecast.models import BandBucket, Profile
 from custom_components.haeo_device_forecast.services import (
-    ATTR_CONFIG_ENTRY_ID,
+    ATTR_DEVICE_ID,
     ATTR_NAME,
     ATTR_PROFILE_ID,
     ATTR_PROFILE_IDS,
@@ -24,18 +26,34 @@ from custom_components.haeo_device_forecast.services import (
 ENTITY_ID = "sensor.test_power"
 
 
-async def _setup_entry(hass) -> MockConfigEntry:
+async def _setup_entry_with_device(hass) -> tuple[MockConfigEntry, str, str]:
+    """Set up a hub entry with one device subentry; return (entry, subentry_id, ha_device_id)."""
     hass.states.async_set(ENTITY_ID, "0")
-    entry = MockConfigEntry(domain=DOMAIN, data={"name": "Test", CONF_POWER_ENTITY_ID: ENTITY_ID})
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={},
+        subentries_data=[
+            {
+                "data": {"name": "Test", CONF_POWER_ENTITY_ID: ENTITY_ID},
+                "subentry_type": SUBENTRY_TYPE_DEVICE,
+                "title": "Test",
+                "unique_id": None,
+            }
+        ],
+    )
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    return entry
+
+    subentry_id = next(iter(entry.subentries))
+    device_entry = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, subentry_id)})
+    assert device_entry is not None
+    return entry, subentry_id, device_entry.id
 
 
 async def test_rename_profile_service_updates_coordinator(hass) -> None:
-    entry = await _setup_entry(hass)
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    entry, subentry_id, device_id = await _setup_entry_with_device(hass)
+    coordinator = hass.data[DOMAIN][entry.entry_id][subentry_id]
     coordinator.profiles = [
         Profile(
             id="p1",
@@ -51,30 +69,29 @@ async def test_rename_profile_service_updates_coordinator(hass) -> None:
     await hass.services.async_call(
         DOMAIN,
         SERVICE_RENAME_PROFILE,
-        {ATTR_CONFIG_ENTRY_ID: entry.entry_id, ATTR_PROFILE_ID: "p1", ATTR_NAME: "New"},
+        {ATTR_DEVICE_ID: device_id, ATTR_PROFILE_ID: "p1", ATTR_NAME: "New"},
         blocking=True,
     )
 
     assert coordinator.profiles[0].name == "New"
 
 
-async def test_rename_profile_service_raises_for_unknown_entry(hass) -> None:
-    await _setup_entry(hass)
+async def test_rename_profile_service_raises_for_unknown_device(hass) -> None:
+    await _setup_entry_with_device(hass)
     async_register_services(hass)
 
     with pytest.raises(ServiceValidationError):
         await hass.services.async_call(
             DOMAIN,
             SERVICE_RENAME_PROFILE,
-            {ATTR_CONFIG_ENTRY_ID: "does-not-exist", ATTR_PROFILE_ID: "p1", ATTR_NAME: "New"},
+            {ATTR_DEVICE_ID: "does-not-exist", ATTR_PROFILE_ID: "p1", ATTR_NAME: "New"},
             blocking=True,
         )
 
 
 async def test_merge_profiles_service(hass) -> None:
-    entry = await _setup_entry(hass)
-    coordinator = hass.data[DOMAIN][entry.entry_id]
-    from custom_components.haeo_device_forecast.models import BandBucket
+    entry, subentry_id, device_id = await _setup_entry_with_device(hass)
+    coordinator = hass.data[DOMAIN][entry.entry_id][subentry_id]
 
     coordinator.profiles = [
         Profile(
@@ -99,7 +116,7 @@ async def test_merge_profiles_service(hass) -> None:
     await hass.services.async_call(
         DOMAIN,
         SERVICE_MERGE_PROFILES,
-        {ATTR_CONFIG_ENTRY_ID: entry.entry_id, ATTR_PROFILE_IDS: ["a", "b"], ATTR_NAME: "Merged"},
+        {ATTR_DEVICE_ID: device_id, ATTR_PROFILE_IDS: ["a", "b"], ATTR_NAME: "Merged"},
         blocking=True,
     )
 
@@ -108,14 +125,14 @@ async def test_merge_profiles_service(hass) -> None:
 
 
 async def test_search_profiles_service(hass) -> None:
-    entry = await _setup_entry(hass)
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    entry, subentry_id, device_id = await _setup_entry_with_device(hass)
+    coordinator = hass.data[DOMAIN][entry.entry_id][subentry_id]
     async_register_services(hass)
 
     await hass.services.async_call(
         DOMAIN,
         SERVICE_SEARCH_PROFILES,
-        {ATTR_CONFIG_ENTRY_ID: entry.entry_id},
+        {ATTR_DEVICE_ID: device_id},
         blocking=True,
     )
 

@@ -81,7 +81,7 @@ Geprüft gegen die aktuelle HAEO-Dokumentation (haeo.io, Stand 2026-09):
   - Anzeige der gefundenen Profile, inkl. Visualisierung des jeweiligen Profilverlaufs (Lastkurve)
   - Benennen von Profilen
   - Zusammenführen ("Mergen") von zwei oder mehr Profilen zu einem – der Name des resultierenden Profils wird beim Mergen abgefragt
-  - Suche nach neuen Profilen
+  - Suche nach neuen Profilen: zusätzlich zum Service als Standard-Button-Entity pro Gerät bereitgestellt, damit sie sich mit einem Klick über eine Dashboard-Karte oder die Geräteseite auslösen lässt (keine Custom Card, `button`-Domain)
 
 # Technische Anforderungen
 - Alle Langzeitdaten sollen so gespeichert werden, dass sie
@@ -92,6 +92,7 @@ Geprüft gegen die aktuelle HAEO-Dokumentation (haeo.io, Stand 2026-09):
 - Unterstützte Sprachen für Config-Flow-/Dashboard-UI: Deutsch und Englisch
 - Skalierung: bis zu ca. 10 Geräte gleichzeitig verwaltbar
 - Architektur: native HA-Integration (Custom Component), kein HA-Add-on – u. a. damit die Lösung auf allen Installationsarten (Core/Container, nicht nur OS/Supervised) läuft, nativen Zugriff auf Recorder/History und die Entity-Registry hat und über HACS verteilt werden kann
+- Einrichtung über **einen** Config-Entry (Hub): Der Nutzer richtet die Integration einmalig ein; jedes zu überwachende Gerät wird darin als **Config-Subentry** ("+ Gerät hinzufügen" auf der Integrationsseite) angelegt, bearbeitet und entfernt – es sind keine mehrfachen Integrationsinstanzen für mehrere Geräte nötig
 
 # Offene Punkte
 - **Mustererkennungs-Algorithmus**: Festgelegt: Dynamic Time Warping (DTW) auf Basis der Profil-Bänder (siehe Abschnitt "Analyse von Lastprofilen"). Die rohen States werden auf ein 5–10-s-Raster mit `min`/`mean`/`max` je Bucket heruntergerechnet; DTW richtet den (ggf. unvollständigen) Live-Verlauf anhand der `mean`-Reihe zeitversatz-tolerant am Profil aus; als lokale Kostenfunktion wird statt der üblichen Euklidischen Distanz eine bandbewusste Funktion verwendet (Kosten 0 innerhalb `[min, max]`, sonst proportional zum Abstand zum Band). Offen ist noch die konkrete Parametrisierung (genaue Bucket-Größe, exakte Formel zur Umrechnung der DTW-Gesamtkosten in den %-Konfidenzwert, Begrenzung der DTW-Bandbreite/Fensterung für die Performance) – das ist Implementierungsdetail und muss die Spec nicht weiter vorgeben.
