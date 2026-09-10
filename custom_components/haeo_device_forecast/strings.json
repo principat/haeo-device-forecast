@@ -13,7 +13,9 @@
   },
   "entity": {
     "sensor": {
-      "forecast_power": { "name": "Forecast power" },
+      "forecast_power": {
+        "name": "Forecast power"
+      },
       "status": {
         "name": "Status",
         "state": {
@@ -21,8 +23,15 @@
           "running": "Running"
         }
       },
-      "profile_name": { "name": "Profile" },
-      "confidence": { "name": "Match confidence" }
+      "profile_name": {
+        "name": "Profile"
+      },
+      "confidence": {
+        "name": "Match confidence"
+      },
+      "known_profiles": {
+        "name": "Known profiles"
+      }
     }
   },
   "services": {
@@ -30,25 +39,46 @@
       "name": "Rename profile",
       "description": "Renames one of a device's recognized load profiles.",
       "fields": {
-        "config_entry_id": { "name": "Device", "description": "The HAEO Device Forecast device." },
-        "profile_id": { "name": "Profile ID", "description": "ID of the profile to rename." },
-        "name": { "name": "New name", "description": "The profile's new name." }
+        "config_entry_id": {
+          "name": "Device",
+          "description": "The HAEO Device Forecast device."
+        },
+        "profile_id": {
+          "name": "Profile ID",
+          "description": "ID of the profile to rename."
+        },
+        "name": {
+          "name": "New name",
+          "description": "The profile's new name."
+        }
       }
     },
     "merge_profiles": {
       "name": "Merge profiles",
       "description": "Merges two or more of a device's profiles into one, widening its learned band.",
       "fields": {
-        "config_entry_id": { "name": "Device", "description": "The HAEO Device Forecast device." },
-        "profile_ids": { "name": "Profile IDs", "description": "IDs of the profiles to merge (at least two)." },
-        "name": { "name": "Name", "description": "Name for the resulting merged profile." }
+        "config_entry_id": {
+          "name": "Device",
+          "description": "The HAEO Device Forecast device."
+        },
+        "profile_ids": {
+          "name": "Profile IDs",
+          "description": "IDs of the profiles to merge (at least two)."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Name for the resulting merged profile."
+        }
       }
     },
     "search_profiles": {
       "name": "Search for new profiles",
       "description": "Re-runs automatic profile discovery over all of a device's stored raw samples.",
       "fields": {
-        "config_entry_id": { "name": "Device", "description": "The HAEO Device Forecast device." }
+        "config_entry_id": {
+          "name": "Device",
+          "description": "The HAEO Device Forecast device."
+        }
       }
     }
   }

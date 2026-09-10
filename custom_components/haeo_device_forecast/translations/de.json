@@ -13,7 +13,9 @@
   },
   "entity": {
     "sensor": {
-      "forecast_power": { "name": "Prognose-Leistung" },
+      "forecast_power": {
+        "name": "Prognose-Leistung"
+      },
       "status": {
         "name": "Status",
         "state": {
@@ -21,8 +23,15 @@
           "running": "Läuft"
         }
       },
-      "profile_name": { "name": "Profil" },
-      "confidence": { "name": "Übereinstimmung" }
+      "profile_name": {
+        "name": "Profil"
+      },
+      "confidence": {
+        "name": "Übereinstimmung"
+      },
+      "known_profiles": {
+        "name": "Bekannte Profile"
+      }
     }
   },
   "services": {
@@ -30,25 +39,46 @@
       "name": "Profil umbenennen",
       "description": "Benennt eines der erkannten Lastprofile eines Geräts um.",
       "fields": {
-        "config_entry_id": { "name": "Gerät", "description": "Das HAEO-Device-Forecast-Gerät." },
-        "profile_id": { "name": "Profil-ID", "description": "ID des umzubenennenden Profils." },
-        "name": { "name": "Neuer Name", "description": "Der neue Name des Profils." }
+        "config_entry_id": {
+          "name": "Gerät",
+          "description": "Das HAEO-Device-Forecast-Gerät."
+        },
+        "profile_id": {
+          "name": "Profil-ID",
+          "description": "ID des umzubenennenden Profils."
+        },
+        "name": {
+          "name": "Neuer Name",
+          "description": "Der neue Name des Profils."
+        }
       }
     },
     "merge_profiles": {
       "name": "Profile zusammenführen",
       "description": "Führt zwei oder mehr Profile eines Geräts zu einem zusammen und erweitert dabei dessen gelerntes Band.",
       "fields": {
-        "config_entry_id": { "name": "Gerät", "description": "Das HAEO-Device-Forecast-Gerät." },
-        "profile_ids": { "name": "Profil-IDs", "description": "IDs der zusammenzuführenden Profile (mindestens zwei)." },
-        "name": { "name": "Name", "description": "Name für das resultierende zusammengeführte Profil." }
+        "config_entry_id": {
+          "name": "Gerät",
+          "description": "Das HAEO-Device-Forecast-Gerät."
+        },
+        "profile_ids": {
+          "name": "Profil-IDs",
+          "description": "IDs der zusammenzuführenden Profile (mindestens zwei)."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Name für das resultierende zusammengeführte Profil."
+        }
       }
     },
     "search_profiles": {
       "name": "Nach neuen Profilen suchen",
       "description": "Führt die automatische Profilerkennung erneut über alle gespeicherten Rohdaten eines Geräts aus.",
       "fields": {
-        "config_entry_id": { "name": "Gerät", "description": "Das HAEO-Device-Forecast-Gerät." }
+        "config_entry_id": {
+          "name": "Gerät",
+          "description": "Das HAEO-Device-Forecast-Gerät."
+        }
       }
     }
   }

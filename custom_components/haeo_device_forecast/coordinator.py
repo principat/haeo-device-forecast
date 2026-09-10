@@ -149,6 +149,7 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
             for profile in self.profiles
         ]
         await self._store.async_save_profiles(self.profiles)
+        self.async_update_listeners()
 
     async def async_merge_profiles(self, profile_ids: list[str], name: str) -> Profile:
         """Merge two or more of this device's profiles into one (Dashboard/Pflege: Mergen).
@@ -171,6 +172,7 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
         merged = merge_profile_bands(to_merge, name)
         self.profiles = [profile for profile in self.profiles if profile.id not in ids] + [merged]
         await self._store.async_save_profiles(self.profiles)
+        self.async_update_listeners()
         return merged
 
     async def async_search_profiles(self) -> list[Profile]:
@@ -187,6 +189,7 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
         runs = detect_runs(raw_samples, self.start_threshold, self._current_end_timeout_seconds())
         self.profiles = detect_profiles(runs, self.bucket_seconds, self.start_threshold)
         await self._store.async_save_profiles(self.profiles)
+        self.async_update_listeners()
         return self.profiles
 
     def _current_end_timeout_seconds(self) -> float:

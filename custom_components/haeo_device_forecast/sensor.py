@@ -39,6 +39,7 @@ async def async_setup_entry(
             StatusSensor(coordinator),
             ProfileNameSensor(coordinator),
             ConfidenceSensor(coordinator),
+            KnownProfilesSensor(coordinator),
         ]
     )
 
@@ -152,3 +153,47 @@ class ConfidenceSensor(_DeviceForecastEntity):
     def native_value(self) -> float | None:
         """Match confidence (0-100), or ``None`` while sleeping/unmatched."""
         return self.coordinator.data.confidence_percent
+
+
+class KnownProfilesSensor(_DeviceForecastEntity):
+    """List of all profiles learned for this device (Dashboard/Pflege).
+
+    Per Specs.md "Dashboard": profiles are managed as a per-device list.
+    Since no custom card is used, the list is exposed as this diagnostic
+    sensor's ``profiles`` attribute (state = count) so it can be inspected
+    via a standard Entities/Markdown card or Developer Tools, and so
+    profile ids are available for the ``rename_profile``/``merge_profiles``
+    services. Each profile's own load-curve visualization is out of scope
+    for this attribute (Specs.md points to a standard History/Statistics
+    graph card fed by the live-tracking entities for that).
+    """
+
+    _attr_translation_key = "known_profiles"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: DeviceForecastCoordinator) -> None:
+        """Initialize the known-profiles sensor."""
+        super().__init__(coordinator, "known_profiles")
+
+    @property
+    def native_value(self) -> int:
+        """Number of profiles currently known for this device."""
+        return len(self.coordinator.profiles)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Summary of every known profile (id, name, duration, energy, timestamps)."""
+        return {
+            "profiles": [
+                {
+                    "id": profile.id,
+                    "name": profile.name,
+                    "duration_seconds": profile.duration_seconds(),
+                    "energy_wh": profile.total_energy_wh(),
+                    "created_at": profile.created_at.isoformat(),
+                    "updated_at": profile.updated_at.isoformat(),
+                }
+                for profile in self.coordinator.profiles
+            ]
+        }

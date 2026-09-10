@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.haeo_device_forecast.const import DOMAIN
@@ -16,6 +17,7 @@ from custom_components.haeo_device_forecast.coordinator import (
 from custom_components.haeo_device_forecast.sensor import (
     ConfidenceSensor,
     ForecastPowerSensor,
+    KnownProfilesSensor,
     ProfileNameSensor,
     StatusSensor,
 )
@@ -130,3 +132,49 @@ async def test_sensors_are_namespaced_by_device_to_avoid_cross_device_collisions
 
     assert sensor.device_info is not None
     assert (DOMAIN, coordinator.config_entry.entry_id) in sensor.device_info["identifiers"]
+
+
+async def test_known_profiles_sensor_lists_all_learned_profiles(hass) -> None:
+    from custom_components.haeo_device_forecast.models import BandBucket, Profile
+
+    coordinator = await _make_coordinator(hass)
+    coordinator.data = DeviceForecastData(
+        status=STATUS_SLEEPING,
+        profile_name=None,
+        confidence_percent=None,
+        current_power=None,
+        estimated_end=None,
+        forecast=[],
+    )
+    coordinator.profiles = [
+        Profile(
+            id="p1",
+            name="Eco 50°",
+            buckets=(
+                BandBucket(offset_seconds=0, min=55.0, mean=60.0, max=65.0),
+                BandBucket(offset_seconds=600, min=0.0, mean=0.0, max=2.0),
+            ),
+            pause_windows=(),
+            created_at=datetime(2026, 9, 1, tzinfo=timezone.utc),
+            updated_at=datetime(2026, 9, 2, tzinfo=timezone.utc),
+        ),
+        Profile(
+            id="p2",
+            name="Intensiv 65°",
+            buckets=(),
+            pause_windows=(),
+            created_at=datetime(2026, 9, 1, tzinfo=timezone.utc),
+            updated_at=datetime(2026, 9, 1, tzinfo=timezone.utc),
+        ),
+    ]
+
+    sensor = KnownProfilesSensor(coordinator)
+
+    assert sensor.native_value == 2
+    profiles_attr = sensor.extra_state_attributes["profiles"]
+    assert len(profiles_attr) == 2
+    assert profiles_attr[0]["id"] == "p1"
+    assert profiles_attr[0]["name"] == "Eco 50°"
+    assert profiles_attr[0]["duration_seconds"] == 600
+    assert profiles_attr[0]["energy_wh"] == pytest.approx(5.0)
+    assert profiles_attr[0]["updated_at"] == "2026-09-02T00:00:00+00:00"
