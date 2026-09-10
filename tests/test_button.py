@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.haeo_device_forecast.button import SearchProfilesButton
 from custom_components.haeo_device_forecast.const import DOMAIN
 from custom_components.haeo_device_forecast.coordinator import DeviceForecastCoordinator
-from custom_components.haeo_device_forecast.models import RawSample
 from custom_components.haeo_device_forecast.storage import DeviceStore
 
 ENTITY_ID = "sensor.test_power"
@@ -40,16 +37,19 @@ async def test_button_is_namespaced_by_device(hass) -> None:
     assert (DOMAIN, SUBENTRY_ID) in button.device_info["identifiers"]
 
 
-async def test_pressing_button_runs_profile_search(hass, hass_storage) -> None:
-    coordinator = await _make_coordinator(hass)
-    t0 = datetime(2026, 9, 3, 20, 0, tzinfo=timezone.utc)
-    await coordinator._store.async_append_raw_samples(
-        [
-            RawSample(timestamp=t0, value=60.0),
-            RawSample(timestamp=t0 + timedelta(seconds=10), value=60.0),
-            RawSample(timestamp=t0 + timedelta(seconds=20), value=1.0),
-        ]
+async def test_pressing_button_runs_profile_search(recorder_mock, hass, hass_storage) -> None:
+    from pytest_homeassistant_custom_component.components.recorder.common import (
+        async_wait_recording_done,
     )
+
+    coordinator = await _make_coordinator(hass)
+    hass.states.async_set(ENTITY_ID, "60.0")
+    await hass.async_block_till_done()
+    hass.states.async_set(ENTITY_ID, "60.0")
+    await hass.async_block_till_done()
+    hass.states.async_set(ENTITY_ID, "1.0")
+    await hass.async_block_till_done()
+    await async_wait_recording_done(hass)
     button = SearchProfilesButton(coordinator)
 
     await button.async_press()

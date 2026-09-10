@@ -124,7 +124,7 @@ async def test_merge_profiles_service(hass) -> None:
     assert coordinator.profiles[0].name == "Merged"
 
 
-async def test_search_profiles_service(hass) -> None:
+async def test_search_profiles_service(recorder_mock, hass, enable_custom_integrations) -> None:
     entry, subentry_id, device_id = await _setup_entry_with_device(hass)
     coordinator = hass.data[DOMAIN][entry.entry_id][subentry_id]
     async_register_services(hass)
@@ -136,4 +136,4 @@ async def test_search_profiles_service(hass) -> None:
         blocking=True,
     )
 
-    assert coordinator.profiles == []  # no raw samples stored yet -> no profiles found
+    assert coordinator.profiles == []  # no recorder history and no raw samples -> no profiles found

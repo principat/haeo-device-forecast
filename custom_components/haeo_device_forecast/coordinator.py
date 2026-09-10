@@ -31,6 +31,7 @@ from .analysis import (
     match_live,
 )
 from .analysis import merge_profiles as merge_profile_bands
+from .history import fetch_raw_history
 from .models import DeviceRun, Profile, RawSample
 from .storage import DeviceStore
 
@@ -47,6 +48,9 @@ DEFAULT_END_TIMEOUT_SECONDS = 300.0
 END_TIMEOUT_MARGIN_SECONDS = 60.0
 #: Spacing of the HAEO ``forecast`` attribute's points (Specs.md: 5-Minuten-Raster).
 FORECAST_GRID_SECONDS = 300
+#: How far back to pull recorder history on the very first profile search,
+#: per Specs.md "Analyse von Lastprofilen" (Basis: die letzten 30 Tage).
+INITIAL_HISTORY_LOOKBACK_DAYS = 30
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,17 +191,37 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
         return merged
 
     async def async_search_profiles(self) -> list[Profile]:
-        """Re-run automatic profile discovery over all stored raw samples.
+        """Re-run automatic profile discovery over the device's full raw-sample history.
 
-        Per Specs.md "Analyse von Lastprofilen" (automatischer Modus):
-        replaces this device's profile list with the result of segmenting
-        and clustering its full retained raw-sample history.
+        Per Specs.md "Analyse von Lastprofilen" (automatischer Modus, komplette
+        30 Tage): pulls any recorder history not yet in our own long-term
+        store - on the very first search that's up to
+        :data:`INITIAL_HISTORY_LOOKBACK_DAYS`, afterwards just the gap since
+        the newest stored sample - appends it to storage, then segments and
+        clusters the combined history into profiles. Without this fetch,
+        relying only on samples accumulated from completed live-tracking
+        runs since setup would find nothing until a run had finished at
+        least once.
 
         Returns:
             The newly discovered list of profiles (also stored on ``self.profiles``).
         """
-        raw_samples = await self._store.async_load_raw_samples()
-        runs = detect_runs(raw_samples, self.start_threshold, self._current_end_timeout_seconds())
+        existing_samples = await self._store.async_load_raw_samples()
+        now = dt_util.utcnow()
+        since = (
+            existing_samples[-1].timestamp
+            if existing_samples
+            else now - timedelta(days=INITIAL_HISTORY_LOOKBACK_DAYS)
+        )
+
+        new_samples = await fetch_raw_history(self.hass, self.power_entity_id, since, now)
+        if existing_samples:
+            new_samples = [s for s in new_samples if s.timestamp > existing_samples[-1].timestamp]
+        if new_samples:
+            await self._store.async_append_raw_samples(new_samples)
+
+        all_samples = existing_samples + new_samples
+        runs = detect_runs(all_samples, self.start_threshold, self._current_end_timeout_seconds())
         self.profiles = detect_profiles(runs, self.bucket_seconds, self.start_threshold)
         await self._store.async_save_profiles(self.profiles)
         self.async_update_listeners()

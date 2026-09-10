@@ -190,21 +190,53 @@ async def test_async_merge_profiles_combines_and_persists(hass, hass_storage) ->
     assert len(stored) == 1
 
 
-async def test_async_search_profiles_rebuilds_from_stored_raw_samples(hass, hass_storage) -> None:
+async def test_async_search_profiles_pulls_recorder_history_and_finds_profiles(
+    recorder_mock, hass, hass_storage
+) -> None:
+    # Regression test: search_profiles must work even when the device's own
+    # storage is still empty (fresh install, no run has completed yet under
+    # live-tracking) by pulling raw states from the recorder, per Specs.md
+    # "Analyse von Lastprofilen" (automatischer Modus über die letzten 30 Tage).
+    from pytest_homeassistant_custom_component.components.recorder.common import (
+        async_wait_recording_done,
+    )
+
     coordinator = await _make_coordinator(hass)
-    from datetime import datetime, timedelta, timezone
-
-    from custom_components.haeo_device_forecast.models import RawSample
-
-    t0 = datetime(2026, 9, 3, 20, 0, tzinfo=timezone.utc)
-    samples = [
-        RawSample(timestamp=t0, value=60.0),
-        RawSample(timestamp=t0 + timedelta(seconds=10), value=60.0),
-        RawSample(timestamp=t0 + timedelta(seconds=20), value=1.0),
-    ]
-    await coordinator._store.async_append_raw_samples(samples)
+    hass.states.async_set(ENTITY_ID, "60.0")
+    await hass.async_block_till_done()
+    hass.states.async_set(ENTITY_ID, "70.0")  # distinct value: recorder dedupes unchanged states
+    await hass.async_block_till_done()
+    hass.states.async_set(ENTITY_ID, "1.0")
+    await hass.async_block_till_done()
+    await async_wait_recording_done(hass)
 
     profiles = await coordinator.async_search_profiles()
 
     assert len(profiles) == 1
     assert coordinator.profiles == profiles
+    stored = await coordinator._store.async_load_raw_samples()
+    assert len(stored) == 3  # the fetched recorder history was also persisted
+
+
+async def test_async_search_profiles_only_fetches_the_gap_since_last_stored_sample(
+    recorder_mock, hass, hass_storage
+) -> None:
+    from pytest_homeassistant_custom_component.components.recorder.common import (
+        async_wait_recording_done,
+    )
+
+    coordinator = await _make_coordinator(hass)
+    hass.states.async_set(ENTITY_ID, "60.0")
+    await hass.async_block_till_done()
+    await async_wait_recording_done(hass)
+    await coordinator.async_search_profiles()
+    first_load = await coordinator._store.async_load_raw_samples()
+    assert len(first_load) == 1
+
+    hass.states.async_set(ENTITY_ID, "1.0")
+    await hass.async_block_till_done()
+    await async_wait_recording_done(hass)
+    await coordinator.async_search_profiles()
+
+    second_load = await coordinator._store.async_load_raw_samples()
+    assert len(second_load) == 2  # appended, not duplicated or refetched from scratch
