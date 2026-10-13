@@ -48,7 +48,9 @@ async def _setup_entry_with_device(hass) -> tuple[MockConfigEntry, str, str]:
     await hass.async_block_till_done()
 
     subentry_id = next(iter(entry.subentries))
-    device_entry = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, subentry_id)})
+    device_entry = dr.async_get(hass).async_get_device_by_identifier(
+        (DOMAIN, subentry_id), entry.entry_id
+    )
     assert device_entry is not None
     return entry, subentry_id, device_entry.id
 
