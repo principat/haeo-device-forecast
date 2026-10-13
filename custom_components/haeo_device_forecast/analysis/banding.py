@@ -3,7 +3,7 @@
 Raw states only change when the reading itself changes (event-driven, not a
 fixed grid), so a sample's value is treated as held constant ("last value
 wins") until the next sample. Buckets aggregate this piecewise-constant
-signal with a time-weighted mean, per Specs.md "Analyse von Lastprofilen"
+signal with a time-weighted mean, per docs/REQUIREMENTS.md "Analyse von Lastprofilen"
 (Richtwert 5-10s Bucket-Größe).
 """
 

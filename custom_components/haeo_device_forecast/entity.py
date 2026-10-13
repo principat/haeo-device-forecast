@@ -1,7 +1,7 @@
 """Shared entity wiring for this integration's per-device entities.
 
 Used by both the sensor and button platforms so every entity of one device
-(one config subentry, per Specs.md "Technische Anforderungen": a single hub
+(one config subentry, per docs/REQUIREMENTS.md "Technische Anforderungen": a single hub
 config entry manages multiple devices as subentries) is grouped under the
 same Home Assistant device and gets a stable, device-namespaced unique id.
 """
@@ -20,7 +20,7 @@ class DeviceForecastEntity(CoordinatorEntity[DeviceForecastCoordinator]):
 
     Registers a Home Assistant device per config subentry so entity ids are
     namespaced by device name (e.g. ``sensor.waschmaschine_status``) instead
-    of colliding across devices - Specs.md requires managing up to ~10
+    of colliding across devices - docs/REQUIREMENTS.md requires managing up to ~10
     devices at once, all under one config entry.
     """
 

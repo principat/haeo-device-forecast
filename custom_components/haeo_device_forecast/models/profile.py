@@ -2,7 +2,7 @@
 
 A profile represents one recognized device program (e.g. "Eco 50°") as a
 band of min/mean/max power values per time bucket, learned from one or more
-historical runs, per Specs.md section "Analyse von Lastprofilen".
+historical runs, per docs/REQUIREMENTS.md section "Analyse von Lastprofilen".
 """
 
 from __future__ import annotations
@@ -102,7 +102,7 @@ class Profile:
     def longest_pause_seconds(self) -> int:
         """Longest expected in-program pause duration, in seconds.
 
-        Used to derive the end-of-run detection threshold, per Specs.md:
+        Used to derive the end-of-run detection threshold, per docs/REQUIREMENTS.md:
         a fixed global timeout would misclassify a profile-internal pause
         as the run's end.
         """

@@ -1,7 +1,7 @@
 """The HAEO Device Forecast integration.
 
 One hub config entry manages any number of devices, each represented by a
-config subentry (Specs.md "Technische Anforderungen"). Every subentry gets
+config subentry (docs/REQUIREMENTS.md "Technische Anforderungen"). Every subentry gets
 its own long-term storage and live-tracking coordinator.
 """
 

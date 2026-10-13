@@ -3,7 +3,7 @@
 Uses :class:`homeassistant.helpers.storage.Store`, so data lands under
 ``.storage/`` in the HA config directory: automatically included in HA
 Backups, removable in one call, and migratable between schema versions via
-``_async_migrate_func``, per Specs.md "Technische Anforderungen".
+``_async_migrate_func``, per docs/REQUIREMENTS.md "Technische Anforderungen".
 """
 
 from __future__ import annotations

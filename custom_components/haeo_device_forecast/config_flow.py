@@ -2,7 +2,7 @@
 
 One singleton hub config entry is created for the whole integration; each
 device to track is added, edited or removed as a config subentry on that
-entry ("+ Add device" on the integration's page), per Specs.md "Technische
+entry ("+ Add device" on the integration's page), per docs/REQUIREMENTS.md "Technische
 Anforderungen" - no need for multiple integration instances to manage
 multiple devices.
 """

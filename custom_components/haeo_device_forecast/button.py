@@ -1,6 +1,6 @@
 """Button entity to trigger automatic profile discovery for one device.
 
-Per Specs.md "Dashboard" (Für die Pflege: Suche nach neuen Profilen): in
+Per docs/REQUIREMENTS.md "Dashboard" (Für die Pflege: Suche nach neuen Profilen): in
 addition to the ``search_profiles`` service, this is exposed as a standard
 button entity so it can be triggered with a single click from a dashboard
 card or the device page, without going through Developer Tools.

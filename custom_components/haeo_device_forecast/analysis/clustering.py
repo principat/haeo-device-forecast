@@ -1,12 +1,12 @@
 """Group device runs into profiles: matching, creation, and merging.
 
-Per Specs.md "Analyse von Lastprofilen": whether a recorded run belongs to
+Per docs/REQUIREMENTS.md "Analyse von Lastprofilen": whether a recorded run belongs to
 an existing profile or starts a new one is decided automatically, tolerant
 to measurement noise and small time shifts (handled by the band-aware DTW
 confidence in :mod:`.dtw`). A matching run widens the profile's band
 (min/max) to also cover its own values, so the profile "learns" its own
 tolerance from observed runs, in addition to the fixed guideline
-tolerances from Specs.md.
+tolerances from docs/REQUIREMENTS.md.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ def _detect_pause_windows(
 
     A pause is any interior stretch of buckets whose mean power stays at or
     below ``pause_threshold`` - the same threshold used to detect a run's
-    start/end (Specs.md: a program-internal pause has "geringen, aber von
+    start/end (docs/REQUIREMENTS.md: a program-internal pause has "geringen, aber von
     null verschiedenen Verbrauch").
     """
     if len(buckets) < 3:
@@ -177,7 +177,7 @@ def detect_profiles(
     """Discover profiles from a batch of historical runs (automatic analysis).
 
     Runs are folded in chronologically, each either widening a matching
-    profile's band or starting a new one, per Specs.md "Analyse von
+    profile's band or starting a new one, per docs/REQUIREMENTS.md "Analyse von
     Lastprofilen" (automatischer Modus über die kompletten 30 Tage).
 
     Args:
@@ -214,7 +214,7 @@ class LiveMatch:
             ``is_known`` is ``False``).
         is_known: Whether ``confidence_percent`` reaches the match
             threshold. When ``False``, ``profile`` is still populated with
-            the worst-case (highest-energy) fallback, per Specs.md.
+            the worst-case (highest-energy) fallback, per docs/REQUIREMENTS.md.
     """
 
     profile: Profile | None
@@ -231,7 +231,7 @@ def match_live(
 ) -> LiveMatch:
     """Match an in-progress run against known profiles for live forecasting.
 
-    Per Specs.md "Erkennen von Lastprofilen während der Nutzung": if several
+    Per docs/REQUIREMENTS.md "Erkennen von Lastprofilen während der Nutzung": if several
     profiles currently match, the one with the highest total energy
     ("energetischer Worst Case") is used, so the forecast can only be
     corrected downward as the run continues. If none match, the

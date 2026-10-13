@@ -4,7 +4,7 @@ Deliberately uses the raw ``states`` table (via
 :func:`homeassistant.components.recorder.history.state_changes_during_period`)
 rather than the recorder's long-term statistics tables, so pattern
 recognition works at full measurement resolution instead of being limited
-by an aggregation interval, per Specs.md "Analyse von Lastprofilen".
+by an aggregation interval, per docs/REQUIREMENTS.md "Analyse von Lastprofilen".
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ async def fetch_raw_history(
     Returns:
         Numeric samples in chronological order. States that are
         ``unavailable``, ``unknown``, or otherwise not parseable as a
-        number are skipped (measurement dropouts, per Specs.md).
+        number are skipped (measurement dropouts, per docs/REQUIREMENTS.md).
     """
     states_by_entity = await get_instance(hass).async_add_executor_job(
         history.state_changes_during_period,

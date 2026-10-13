@@ -1,6 +1,6 @@
 """Detect device runs (program start/end) from a stream of raw power samples.
 
-Per Specs.md "Analyse von Lastprofilen": a run starts when power exceeds a
+Per docs/REQUIREMENTS.md "Analyse von Lastprofilen": a run starts when power exceeds a
 threshold and ends only once power has stayed below that threshold for a
 continuous duration (``end_timeout_seconds``). That timeout is deliberately
 a parameter here, not a fixed constant - callers derive it from the longest

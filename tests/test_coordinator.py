@@ -195,7 +195,7 @@ async def test_async_search_profiles_pulls_recorder_history_and_finds_profiles(
 ) -> None:
     # Regression test: search_profiles must work even when the device's own
     # storage is still empty (fresh install, no run has completed yet under
-    # live-tracking) by pulling raw states from the recorder, per Specs.md
+    # live-tracking) by pulling raw states from the recorder, per docs/REQUIREMENTS.md
     # "Analyse von Lastprofilen" (automatischer Modus über die letzten 30 Tage).
     from pytest_homeassistant_custom_component.components.recorder.common import (
         async_wait_recording_done,

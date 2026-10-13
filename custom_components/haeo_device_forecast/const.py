@@ -9,5 +9,5 @@ CONF_BUCKET_SECONDS = "bucket_seconds"
 
 #: Default power (W) above which a device run is considered started.
 DEFAULT_START_THRESHOLD = 5.0
-#: Default band bucket width in seconds (Specs.md Richtwert: 5-10s).
+#: Default band bucket width in seconds (docs/REQUIREMENTS.md Richtwert: 5-10s).
 DEFAULT_BUCKET_SECONDS = 10

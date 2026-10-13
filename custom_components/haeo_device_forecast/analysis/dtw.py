@@ -1,12 +1,12 @@
 """Band-aware Dynamic Time Warping between a live power trace and a profile band.
 
-Per Specs.md ("Offene Punkte" / Mustererkennungs-Algorithmus): standard DTW
+Per docs/REQUIREMENTS.md ("Offene Punkte" / Mustererkennungs-Algorithmus): standard DTW
 uses a Euclidean local cost function, but here a reading counts as a full
 match anywhere inside the profile's ``[min, max]`` band for that time
 bucket - only a deviation outside the band should reduce the confidence,
 proportional to the distance from the band. Bucket-size, exact confidence
 formula and DTW windowing are explicitly left as implementation details in
-Specs.md; this module documents the concrete choices made here.
+docs/REQUIREMENTS.md; this module documents the concrete choices made here.
 """
 
 from __future__ import annotations
@@ -17,11 +17,11 @@ import numpy as np
 
 from ..models import BandBucket
 
-#: Confidence below which Specs.md considers a run to not match a profile.
+#: Confidence below which docs/REQUIREMENTS.md considers a run to not match a profile.
 CONFIDENCE_MATCH_THRESHOLD = 90.0
 
 #: Relative measurement-tolerance margin added to every bucket's [min, max]
-#: band before computing distance, per Specs.md "Messtoleranzen (Richtwert 5%)".
+#: band before computing distance, per docs/REQUIREMENTS.md "Messtoleranzen (Richtwert 5%)".
 #: This matters most for a profile still based on a single run, whose raw
 #: band otherwise has zero width.
 DEFAULT_TOLERANCE_RATIO = 0.05
@@ -61,7 +61,7 @@ def band_aware_dtw_cost(
             aligned live/band pair) to bound compute cost and prevent
             pathological alignments; ``None`` disables windowing.
         tolerance_ratio: Extra relative margin added to each bucket's
-            ``[min, max]`` before computing distance (Specs.md: 5% measurement
+            ``[min, max]`` before computing distance (docs/REQUIREMENTS.md: 5% measurement
             tolerance).
         tolerance_floor: Absolute floor (W) for that margin.
         open_end: If ``True``, ``live_values`` must be fully consumed but

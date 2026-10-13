@@ -94,9 +94,13 @@ Geprüft gegen die aktuelle HAEO-Dokumentation (haeo.io, Stand 2026-09):
   - ggf. ein Diagramm, das die aktuelle Lastkurve über die geplante legt (über Standard-History/Statistics-Graph-Card auf Basis der bereitgestellten Entities)
 - Für die Pflege (umgesetzt über HA-Standardmechanismen wie Options Flow / Services + Standard-Entities, sowie eine Custom Frontend Card für die Profil-Visualisierung, siehe unten)
   - Mehrere Profile werden als Liste je Gerät verwaltet
-  - Anzeige der gefundenen Profile, inkl. Visualisierung des jeweiligen Profilverlaufs (Lastkurve): Da Profile über eine relative Zeitachse (Sekunden seit Laufstart) verlaufen statt über eine Wanduhrzeit, kann das nicht über Standard-History/Statistics-Graph-Cards abgebildet werden – dafür wird eine schlanke Custom Lovelace Card (Frontend-Ressource) bereitgestellt, die die Bänder (`min`/`mean`/`max` je Zeit-Bucket) aus den von der Integration bereitgestellten Attributen liest und die Profile interaktiv auswählbar darstellt. Es handelt sich weiterhin um eine native HA-Integration (kein Add-on, siehe "Technische Anforderungen") – die Card ist nur eine zusätzliche Frontend-Ressource derselben Integration. **Status (Custom Card): noch nicht umgesetzt** – bis dahin stellt der Sensor "Bekannte Profile" die Profilliste als Attribut bereit
+  - Anzeige der gefundenen Profile, inkl. Visualisierung des jeweiligen Profilverlaufs (Lastkurve): Da Profile über eine relative Zeitachse (Sekunden seit Laufstart) verlaufen statt über eine Wanduhrzeit, kann das nicht unmittelbar über Standard-History/Statistics-Graph-Cards abgebildet werden. Umsetzung in zwei Stufen:
+    - Umgesetzt: Die Profil-Vorschau legt die relative Zeitachse eines ausgewählten Profils auf die Wanduhrzeit um. Der Service `preview_profile` wählt das Profil, der Sensor "Profil-Vorschau" stellt dessen Band im selben Punktformat wie das HAEO-`forecast`-Attribut bereit (`time`, `value` = `mean`, zusätzlich `min`/`max` je Punkt), verankert am Zeitpunkt der Auswahl. Damit zeichnet jede Diagramm-Card mit Zeitachse die Lastkurve "so sieht dieses Programm aus, wenn es jetzt startet". Die Auswahl ist reiner Anzeigezustand und wird bewusst nicht persistiert; die Bucket-Auflösung wird auf eine diagrammtaugliche Punktzahl heruntergerechnet, wobei `min`/`max` als Hüllkurve des zusammengefassten Fensters erhalten bleiben (das Band wird also nie zu schmal dargestellt).
+    - **Status (Custom Card): noch nicht umgesetzt** – zusätzlich vorgesehen ist eine schlanke Custom Lovelace Card (Frontend-Ressource), die die Bänder direkt auf der relativen Zeitachse zeichnet und die Profilauswahl in der Card selbst anbietet, also ohne Helfer/Automation im Dashboard. Es handelt sich weiterhin um eine native HA-Integration (kein Add-on, siehe "Technische Anforderungen") – die Card wäre nur eine zusätzliche Frontend-Ressource derselben Integration.
+  - Die Profilliste selbst stellt der Sensor "Bekannte Profile" als Attribut bereit (ID, Name, Dauer, Energie, Zeitstempel)
   - Benennen von Profilen
   - Zusammenführen ("Mergen") von zwei oder mehr Profilen zu einem – der Name des resultierenden Profils wird beim Mergen abgefragt
+  - Löschen einzelner Profile: entfernt nur das gelernte Band, nicht die Rohdaten, aus denen es gelernt wurde. Da die Profilsuche die Liste komplett aus der Rohdaten-Historie neu aufbaut, kann ein gelöschtes Profil dabei wieder entstehen – Löschen ist damit eine Korrektur der aktuellen Liste, keine dauerhafte Ausschlussregel
   - Suche nach neuen Profilen: zusätzlich zum Service als Standard-Button-Entity pro Gerät bereitgestellt, damit sie sich mit einem Klick über eine Dashboard-Karte oder die Geräteseite auslösen lässt (keine Custom Card, `button`-Domain)
 
 ## 3. Nicht-funktionale Anforderungen
@@ -122,7 +126,7 @@ Geprüft gegen die aktuelle HAEO-Dokumentation (haeo.io, Stand 2026-09):
 
 ### 4.2 Plattform & Aufbau
 
-- `custom_components/haeo_device_forecast/` mit den Plattformen `sensor` und `button`; Profilverwaltung über die Services `rename_profile`, `merge_profiles`, `search_profiles`.
+- `custom_components/haeo_device_forecast/` mit den Plattformen `sensor` und `button`; Profilverwaltung über die Services `rename_profile`, `merge_profiles`, `delete_profile`, `search_profiles` sowie `preview_profile` für die Profil-Vorschau.
 - Speicherung: je Gerät zwei HA-`Store`-Dateien unter `.storage/` (Rohdaten und Profile), jeweils mit eigener Formatversion; Profile tragen zusätzlich eine `schema_version`.
 - Rohdaten-Basis: Recorder-History des Leistungssensors (beim ersten Start die letzten 30 Tage), danach fortlaufend in die eigene Langzeitspeicherung übernommen.
 - Analyse in `analysis/` (Segmentierung, Banding, Clustering, DTW, Prognose), Abhängigkeit `numpy`.
