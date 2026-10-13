@@ -1,13 +1,17 @@
 {
   "domain": "haeo_device_forecast",
   "name": "HAEO Device Forecast",
-  "codeowners": ["@principat"],
+  "codeowners": [
+    "@principat"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/principat/haeo-device-forecast",
   "integration_type": "hub",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/principat/haeo-device-forecast/issues",
-  "requirements": ["numpy"],
+  "requirements": [
+    "numpy"
+  ],
   "single_config_entry": true,
-  "version": "0.1.0"
+  "version": "0.4.0"
 }
