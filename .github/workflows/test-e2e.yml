@@ -1,0 +1,33 @@
+name: E2E UI tests
+
+on:
+  pull_request:
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install test dependencies
+        run: pip install -r requirements_e2e.txt
+
+      - name: Install Playwright's Chromium
+        run: python -m playwright install --with-deps chromium
+
+      - name: Run e2e UI tests
+        run: python -m pytest tests_e2e
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: tests_e2e/screenshots/*.png
+          if-no-files-found: ignore
