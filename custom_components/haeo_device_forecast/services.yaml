@@ -41,3 +41,29 @@ search_profiles:
         device:
           filter:
             integration: haeo_device_forecast
+
+delete_profile:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          filter:
+            integration: haeo_device_forecast
+    profile_id:
+      required: true
+      selector:
+        text:
+
+preview_profile:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          filter:
+            integration: haeo_device_forecast
+    profile_id:
+      required: false
+      selector:
+        text:

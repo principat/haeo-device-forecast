@@ -1,6 +1,6 @@
 """Map a matched profile's remaining band onto the HAEO 5-minute forecast grid.
 
-Per Specs.md "Schnittstelle zu HAEO": the ``forecast`` attribute is a list
+Per docs/REQUIREMENTS.md "Schnittstelle zu HAEO": the ``forecast`` attribute is a list
 of ``{"time": ..., "value": ...}`` points on a fixed grid (5 minutes by
 default here, matching the integration's live-tracking resolution).
 """
@@ -29,7 +29,7 @@ def build_forecast_points(
         profile: The profile currently used for the forecast.
         elapsed_seconds: How far into the run we already are.
         grid_seconds: Spacing between forecast points, in seconds (Richtwert
-            5 Minuten, per Specs.md "Erkennen von Lastprofilen während der
+            5 Minuten, per docs/REQUIREMENTS.md "Erkennen von Lastprofilen während der
             Nutzung").
 
     Returns:
@@ -50,5 +50,50 @@ def build_forecast_points(
 
     if not points:
         points.append((duration, _value_at_offset(profile, duration)))
+
+    return points
+
+
+def build_curve_points(
+    profile: Profile, max_points: int = 300
+) -> list[tuple[int, float, float, float]]:
+    """Downsample a profile's full band to a point list for visualization.
+
+    Per docs/REQUIREMENTS.md "Dashboard": the learned profiles are shown with their
+    load curve. A profile's band is stored on the 5-10 s bucket grid, which
+    is far too fine for a dashboard chart (a multi-hour program has
+    thousands of buckets), so neighbouring buckets are aggregated into at
+    most ``max_points`` points - keeping ``min``/``max`` as the envelope of
+    each window so the band never looks narrower than it is.
+
+    Args:
+        profile: The profile whose band to render.
+        max_points: Upper bound on the number of returned points.
+
+    Returns:
+        ``(offset_seconds, mean, min, max)`` tuples ordered by offset,
+        always including the profile's last bucket. Empty if the profile
+        has no buckets.
+    """
+    buckets = profile.buckets
+    if not buckets:
+        return []
+
+    stride = max(1, -(-len(buckets) // max(1, max_points)))
+    points: list[tuple[int, float, float, float]] = []
+    for start in range(0, len(buckets), stride):
+        window = buckets[start : start + stride]
+        points.append(
+            (
+                window[0].offset_seconds,
+                sum(bucket.mean for bucket in window) / len(window),
+                min(bucket.min for bucket in window),
+                max(bucket.max for bucket in window),
+            )
+        )
+
+    last = buckets[-1]
+    if points[-1][0] != last.offset_seconds:
+        points.append((last.offset_seconds, last.mean, last.min, last.max))
 
     return points

@@ -1,6 +1,6 @@
 """Live tracking of one device's current run, for the forecast sensors.
 
-Implements the ``sleeping``/``running`` state machine from Specs.md
+Implements the ``sleeping``/``running`` state machine from docs/REQUIREMENTS.md
 "Erkennen von Lastprofilen während der Nutzung": a run starts when power
 crosses ``start_threshold`` and only ends once power has stayed at or below
 that threshold for a duration derived from the longest known profile pause
@@ -44,12 +44,12 @@ STATUS_RUNNING = "running"
 #: duration) is known yet for this device.
 DEFAULT_END_TIMEOUT_SECONDS = 300.0
 #: Safety margin added on top of the longest known profile pause, per
-#: Specs.md ("... plus Sicherheitsmarge").
+#: docs/REQUIREMENTS.md ("... plus Sicherheitsmarge").
 END_TIMEOUT_MARGIN_SECONDS = 60.0
-#: Spacing of the HAEO ``forecast`` attribute's points (Specs.md: 5-Minuten-Raster).
+#: Spacing of the HAEO ``forecast`` attribute's points (docs/REQUIREMENTS.md: 5-Minuten-Raster).
 FORECAST_GRID_SECONDS = 300
 #: How far back to pull recorder history on the very first profile search,
-#: per Specs.md "Analyse von Lastprofilen" (Basis: die letzten 30 Tage).
+#: per docs/REQUIREMENTS.md "Analyse von Lastprofilen" (Basis: die letzten 30 Tage).
 INITIAL_HISTORY_LOOKBACK_DAYS = 30
 
 
@@ -111,7 +111,7 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
                 device is managed under.
             subentry_id: Id of the config subentry representing this device -
                 its stable identity for storage keys, unique ids and the
-                registered HA device (Specs.md: one hub entry manages
+                registered HA device (docs/REQUIREMENTS.md: one hub entry manages
                 multiple devices as config subentries).
             device_name: User-chosen name of this device, used as the HA
                 device's display name.
@@ -135,6 +135,8 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
         self.bucket_seconds = bucket_seconds
         self.profiles: list[Profile] = []
         self.status = STATUS_SLEEPING
+        self.preview_profile_id: str | None = None
+        self.preview_anchor: datetime | None = None
 
         self._store = store
         self._current_run_samples: list[RawSample] = []
@@ -166,6 +168,62 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
         await self._store.async_save_profiles(self.profiles)
         self.async_update_listeners()
 
+    async def async_delete_profile(self, profile_id: str) -> None:
+        """Delete one of this device's profiles (Dashboard/Pflege: Löschen).
+
+        Only the profile (its learned band) is removed; the raw samples it
+        was learned from stay in long-term storage, so a later
+        :meth:`async_search_profiles` - which rebuilds the whole list from
+        that history - can recreate an equivalent profile. Per
+        docs/REQUIREMENTS.md "Dashboard".
+
+        Args:
+            profile_id: Id of the profile to delete.
+
+        Raises:
+            ValueError: If no profile with ``profile_id`` is known.
+        """
+        if not any(profile.id == profile_id for profile in self.profiles):
+            raise ValueError(f"Unknown profile id: {profile_id}")
+
+        self.profiles = [profile for profile in self.profiles if profile.id != profile_id]
+        if self.preview_profile_id == profile_id:
+            self.preview_profile_id = None
+            self.preview_anchor = None
+        await self._store.async_save_profiles(self.profiles)
+        self.async_update_listeners()
+
+    def async_set_profile_preview(self, profile_id: str | None) -> None:
+        """Select the profile whose load curve the preview sensor exposes.
+
+        Per docs/REQUIREMENTS.md "Dashboard": the preview anchors the profile's
+        relative band (seconds since run start) to wall-clock time, so a
+        standard time-axis chart card can draw it. The selection is
+        presentation state only and is deliberately not persisted.
+
+        Args:
+            profile_id: Id of the profile to preview, or ``None`` to clear.
+
+        Raises:
+            ValueError: If ``profile_id`` is not ``None`` and unknown.
+        """
+        if profile_id is not None and not any(
+            profile.id == profile_id for profile in self.profiles
+        ):
+            raise ValueError(f"Unknown profile id: {profile_id}")
+
+        self.preview_profile_id = profile_id
+        self.preview_anchor = dt_util.utcnow() if profile_id is not None else None
+        self.async_update_listeners()
+
+    @property
+    def preview_profile(self) -> Profile | None:
+        """The profile currently selected for preview, if any."""
+        return next(
+            (profile for profile in self.profiles if profile.id == self.preview_profile_id),
+            None,
+        )
+
     async def async_merge_profiles(self, profile_ids: list[str], name: str) -> Profile:
         """Merge two or more of this device's profiles into one (Dashboard/Pflege: Mergen).
 
@@ -186,14 +244,21 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
 
         merged = merge_profile_bands(to_merge, name)
         self.profiles = [profile for profile in self.profiles if profile.id not in ids] + [merged]
+        self._prune_preview()
         await self._store.async_save_profiles(self.profiles)
         self.async_update_listeners()
         return merged
 
+    def _prune_preview(self) -> None:
+        """Clear the preview selection if its profile no longer exists."""
+        if self.preview_profile_id is not None and self.preview_profile is None:
+            self.preview_profile_id = None
+            self.preview_anchor = None
+
     async def async_search_profiles(self) -> list[Profile]:
         """Re-run automatic profile discovery over the device's full raw-sample history.
 
-        Per Specs.md "Analyse von Lastprofilen" (automatischer Modus, komplette
+        Per docs/REQUIREMENTS.md "Analyse von Lastprofilen" (automatischer Modus, komplette
         30 Tage): pulls any recorder history not yet in our own long-term
         store - on the very first search that's up to
         :data:`INITIAL_HISTORY_LOOKBACK_DAYS`, afterwards just the gap since
@@ -223,6 +288,7 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
         all_samples = existing_samples + new_samples
         runs = detect_runs(all_samples, self.start_threshold, self._current_end_timeout_seconds())
         self.profiles = detect_profiles(runs, self.bucket_seconds, self.start_threshold)
+        self._prune_preview()
         await self._store.async_save_profiles(self.profiles)
         self.async_update_listeners()
         return self.profiles

@@ -59,6 +59,9 @@
       },
       "known_profiles": {
         "name": "Known profiles"
+      },
+      "profile_preview": {
+        "name": "Profile preview"
       }
     },
     "button": {
@@ -111,6 +114,34 @@
         "device_id": {
           "name": "Device",
           "description": "The HAEO Device Forecast device."
+        }
+      }
+    },
+    "delete_profile": {
+      "name": "Delete profile",
+      "description": "Deletes one of a device's recognized load profiles. The raw samples it was learned from are kept, so a later profile search can recreate it.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The HAEO Device Forecast device."
+        },
+        "profile_id": {
+          "name": "Profile ID",
+          "description": "ID of the profile to delete."
+        }
+      }
+    },
+    "preview_profile": {
+      "name": "Preview profile",
+      "description": "Selects the profile whose load curve the \"Profile preview\" sensor exposes, anchored to the current time so a chart card can plot it.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The HAEO Device Forecast device."
+        },
+        "profile_id": {
+          "name": "Profile ID",
+          "description": "ID of the profile to preview. Leave empty to clear the preview."
         }
       }
     }

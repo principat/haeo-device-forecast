@@ -1,4 +1,4 @@
-"""Tests for the HA services wrapping profile management (rename/merge/search)."""
+"""Tests for the HA services wrapping profile management (rename/merge/delete/search/preview)."""
 
 from __future__ import annotations
 
@@ -17,7 +17,9 @@ from custom_components.haeo_device_forecast.services import (
     ATTR_NAME,
     ATTR_PROFILE_ID,
     ATTR_PROFILE_IDS,
+    SERVICE_DELETE_PROFILE,
     SERVICE_MERGE_PROFILES,
+    SERVICE_PREVIEW_PROFILE,
     SERVICE_RENAME_PROFILE,
     SERVICE_SEARCH_PROFILES,
     async_register_services,
@@ -137,3 +139,90 @@ async def test_search_profiles_service(recorder_mock, hass, enable_custom_integr
     )
 
     assert coordinator.profiles == []  # no recorder history and no raw samples -> no profiles found
+
+
+def _profile(profile_id: str, name: str) -> Profile:
+    return Profile(
+        id=profile_id,
+        name=name,
+        buckets=(BandBucket(offset_seconds=0, min=10.0, mean=10.0, max=10.0),),
+        pause_windows=(),
+        created_at=datetime(2026, 9, 1, tzinfo=timezone.utc),
+        updated_at=datetime(2026, 9, 1, tzinfo=timezone.utc),
+    )
+
+
+async def test_delete_profile_service_removes_only_that_profile(hass) -> None:
+    entry, subentry_id, device_id = await _setup_entry_with_device(hass)
+    coordinator = hass.data[DOMAIN][entry.entry_id][subentry_id]
+    coordinator.profiles = [_profile("a", "A"), _profile("b", "B")]
+    async_register_services(hass)
+
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_DELETE_PROFILE,
+        {ATTR_DEVICE_ID: device_id, ATTR_PROFILE_ID: "a"},
+        blocking=True,
+    )
+
+    assert [profile.id for profile in coordinator.profiles] == ["b"]
+
+
+async def test_delete_profile_service_raises_for_unknown_profile(hass) -> None:
+    entry, subentry_id, device_id = await _setup_entry_with_device(hass)
+    coordinator = hass.data[DOMAIN][entry.entry_id][subentry_id]
+    coordinator.profiles = [_profile("a", "A")]
+    async_register_services(hass)
+
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            DOMAIN,
+            SERVICE_DELETE_PROFILE,
+            {ATTR_DEVICE_ID: device_id, ATTR_PROFILE_ID: "nope"},
+            blocking=True,
+        )
+
+    assert [profile.id for profile in coordinator.profiles] == ["a"]
+
+
+async def test_preview_profile_service_selects_and_clears_the_preview(hass) -> None:
+    entry, subentry_id, device_id = await _setup_entry_with_device(hass)
+    coordinator = hass.data[DOMAIN][entry.entry_id][subentry_id]
+    coordinator.profiles = [_profile("a", "A")]
+    async_register_services(hass)
+
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_PREVIEW_PROFILE,
+        {ATTR_DEVICE_ID: device_id, ATTR_PROFILE_ID: "a"},
+        blocking=True,
+    )
+    assert coordinator.preview_profile_id == "a"
+    assert coordinator.preview_anchor is not None
+
+    # An omitted profile_id is the dashboard's "nothing selected" entry.
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_PREVIEW_PROFILE,
+        {ATTR_DEVICE_ID: device_id},
+        blocking=True,
+    )
+    assert coordinator.preview_profile_id is None
+    assert coordinator.preview_anchor is None
+
+
+async def test_preview_profile_service_raises_for_unknown_profile(hass) -> None:
+    entry, subentry_id, device_id = await _setup_entry_with_device(hass)
+    coordinator = hass.data[DOMAIN][entry.entry_id][subentry_id]
+    coordinator.profiles = [_profile("a", "A")]
+    async_register_services(hass)
+
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            DOMAIN,
+            SERVICE_PREVIEW_PROFILE,
+            {ATTR_DEVICE_ID: device_id, ATTR_PROFILE_ID: "nope"},
+            blocking=True,
+        )
+
+    assert coordinator.preview_profile_id is None

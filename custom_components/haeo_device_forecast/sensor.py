@@ -1,6 +1,6 @@
 """Sensor entities exposing one device's live-tracking state.
 
-Per Specs.md "Schnittstelle zu HAEO" and "Benachrichtigung": the power/
+Per docs/REQUIREMENTS.md "Schnittstelle zu HAEO" and "Benachrichtigung": the power/
 forecast sensor is the one HAEO actually consumes (current load as state,
 ``forecast`` attribute for the preview); the status, profile-name and
 confidence sensors exist for dashboards and for user-built notification
@@ -9,6 +9,7 @@ automations.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Any, ClassVar
 
 from homeassistant.components.sensor import (
@@ -22,6 +23,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .analysis import build_curve_points
 from .const import DOMAIN
 from .coordinator import DeviceForecastCoordinator
 from .entity import DeviceForecastEntity
@@ -30,7 +32,7 @@ from .entity import DeviceForecastEntity
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    """Set up the forecast/status/profile/confidence/known-profiles sensors for every device."""
+    """Set up this integration's per-device sensors (live tracking plus profile preview)."""
     coordinators: dict[str, DeviceForecastCoordinator] = hass.data[DOMAIN][entry.entry_id]
     for subentry_id, coordinator in coordinators.items():
         async_add_entities(
@@ -40,6 +42,7 @@ async def async_setup_entry(
                 ProfileNameSensor(coordinator),
                 ConfidenceSensor(coordinator),
                 KnownProfilesSensor(coordinator),
+                ProfilePreviewSensor(coordinator),
             ],
             config_subentry_id=subentry_id,
         )
@@ -52,7 +55,7 @@ class _DeviceForecastEntity(DeviceForecastEntity, SensorEntity):
 class ForecastPowerSensor(_DeviceForecastEntity):
     """Current power draw, with the HAEO ``forecast`` attribute.
 
-    Per Specs.md "Schnittstelle zu HAEO": HAEO reads the current load from
+    Per docs/REQUIREMENTS.md "Schnittstelle zu HAEO": HAEO reads the current load from
     this sensor's state and the preview from its ``forecast`` attribute -
     no further HAEO-specific registration is needed.
     """
@@ -135,13 +138,13 @@ class ConfidenceSensor(_DeviceForecastEntity):
 class KnownProfilesSensor(_DeviceForecastEntity):
     """List of all profiles learned for this device (Dashboard/Pflege).
 
-    Per Specs.md "Dashboard": profiles are managed as a per-device list.
+    Per docs/REQUIREMENTS.md "Dashboard": profiles are managed as a per-device list.
     Since no custom card is used, the list is exposed as this diagnostic
     sensor's ``profiles`` attribute (state = count) so it can be inspected
     via a standard Entities/Markdown card or Developer Tools, and so
     profile ids are available for the ``rename_profile``/``merge_profiles``
     services. Each profile's own load-curve visualization is out of scope
-    for this attribute (Specs.md points to a standard History/Statistics
+    for this attribute (docs/REQUIREMENTS.md points to a standard History/Statistics
     graph card fed by the live-tracking entities for that).
     """
 
@@ -173,4 +176,61 @@ class KnownProfilesSensor(_DeviceForecastEntity):
                 }
                 for profile in self.coordinator.profiles
             ]
+        }
+
+
+class ProfilePreviewSensor(_DeviceForecastEntity):
+    """Load curve of the profile selected via ``preview_profile`` (Dashboard/Pflege).
+
+    Per docs/REQUIREMENTS.md "Dashboard": a learned profile's load curve runs on a
+    relative time axis (seconds since run start), which a standard
+    time-axis chart card cannot plot. This sensor anchors the selected
+    profile's band to wall-clock time - starting when the preview was
+    selected - and exposes it in the same ``{"time", "value"}`` shape as
+    the HAEO ``forecast`` attribute, plus ``min``/``max`` per point for the
+    band, so a chart card can draw "what this program looks like if it
+    started now". The state is the previewed profile's name.
+    """
+
+    _attr_translation_key = "profile_preview"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: DeviceForecastCoordinator) -> None:
+        """Initialize the profile-preview sensor."""
+        super().__init__(coordinator, "profile_preview")
+
+    @property
+    def native_value(self) -> str | None:
+        """Name of the previewed profile, or ``None`` if none is selected."""
+        profile = self.coordinator.preview_profile
+        return profile.name if profile else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """The previewed profile's band as time-anchored forecast points."""
+        profile = self.coordinator.preview_profile
+        anchor = self.coordinator.preview_anchor
+        if profile is None or anchor is None:
+            return {
+                "profile_id": None,
+                "started_at": None,
+                "duration_seconds": None,
+                "energy_wh": None,
+                "forecast": [],
+            }
+
+        return {
+            "profile_id": profile.id,
+            "started_at": anchor.isoformat(),
+            "duration_seconds": profile.duration_seconds(),
+            "energy_wh": profile.total_energy_wh(),
+            "forecast": [
+                {
+                    "time": (anchor + timedelta(seconds=offset)).isoformat(),
+                    "value": mean,
+                    "min": minimum,
+                    "max": maximum,
+                }
+                for offset, mean, minimum, maximum in build_curve_points(profile)
+            ],
         }

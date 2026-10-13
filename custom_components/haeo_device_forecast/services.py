@@ -2,8 +2,9 @@
 
 Thin wrappers around :class:`~.coordinator.DeviceForecastCoordinator`'s
 profile-management methods, exposed as standard HA services so profile
-maintenance (Benennen, Mergen, Suche nach neuen Profilen) can be done via
-HA's own UI (Developer Tools > Actions) or automations, per Specs.md
+maintenance (Benennen, Mergen, Löschen, Suche nach neuen Profilen, Auswahl
+der Profil-Vorschau) can be done via
+HA's own UI (Developer Tools > Actions) or automations, per docs/REQUIREMENTS.md
 "Dashboard" (Pflege über Standardmechanismen, keine Custom Card). Devices
 are targeted by their HA device id (one hub config entry manages multiple
 devices as config subentries, each registered as its own HA device).
@@ -23,6 +24,8 @@ from .coordinator import DeviceForecastCoordinator
 SERVICE_RENAME_PROFILE = "rename_profile"
 SERVICE_MERGE_PROFILES = "merge_profiles"
 SERVICE_SEARCH_PROFILES = "search_profiles"
+SERVICE_DELETE_PROFILE = "delete_profile"
+SERVICE_PREVIEW_PROFILE = "preview_profile"
 
 ATTR_DEVICE_ID = "device_id"
 ATTR_PROFILE_ID = "profile_id"
@@ -46,6 +49,22 @@ _MERGE_PROFILES_SCHEMA = vol.Schema(
 )
 
 _SEARCH_PROFILES_SCHEMA = vol.Schema({vol.Required(ATTR_DEVICE_ID): cv.string})
+
+_DELETE_PROFILE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_DEVICE_ID): cv.string,
+        vol.Required(ATTR_PROFILE_ID): cv.string,
+    }
+)
+
+#: ``profile_id`` is optional here: omitting it (or passing an empty string)
+#: clears the preview, which is what a dashboard's "nothing selected" entry maps to.
+_PREVIEW_PROFILE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_DEVICE_ID): cv.string,
+        vol.Optional(ATTR_PROFILE_ID): cv.string,
+    }
+)
 
 
 def _get_coordinator(hass: HomeAssistant, device_id: str) -> DeviceForecastCoordinator:
@@ -102,6 +121,20 @@ def async_register_services(hass: HomeAssistant) -> None:
         coordinator = _get_coordinator(hass, call.data[ATTR_DEVICE_ID])
         await coordinator.async_search_profiles()
 
+    async def handle_delete_profile(call: ServiceCall) -> None:
+        coordinator = _get_coordinator(hass, call.data[ATTR_DEVICE_ID])
+        try:
+            await coordinator.async_delete_profile(call.data[ATTR_PROFILE_ID])
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+
+    async def handle_preview_profile(call: ServiceCall) -> None:
+        coordinator = _get_coordinator(hass, call.data[ATTR_DEVICE_ID])
+        try:
+            coordinator.async_set_profile_preview(call.data.get(ATTR_PROFILE_ID) or None)
+        except ValueError as err:
+            raise ServiceValidationError(str(err)) from err
+
     hass.services.async_register(
         DOMAIN, SERVICE_RENAME_PROFILE, handle_rename_profile, schema=_RENAME_PROFILE_SCHEMA
     )
@@ -110,4 +143,10 @@ def async_register_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN, SERVICE_SEARCH_PROFILES, handle_search_profiles, schema=_SEARCH_PROFILES_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_DELETE_PROFILE, handle_delete_profile, schema=_DELETE_PROFILE_SCHEMA
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_PREVIEW_PROFILE, handle_preview_profile, schema=_PREVIEW_PROFILE_SCHEMA
     )

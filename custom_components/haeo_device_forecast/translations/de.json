@@ -59,6 +59,9 @@
       },
       "known_profiles": {
         "name": "Bekannte Profile"
+      },
+      "profile_preview": {
+        "name": "Profil-Vorschau"
       }
     },
     "button": {
@@ -111,6 +114,34 @@
         "device_id": {
           "name": "Gerät",
           "description": "Das HAEO-Device-Forecast-Gerät."
+        }
+      }
+    },
+    "delete_profile": {
+      "name": "Profil löschen",
+      "description": "Löscht eines der erkannten Lastprofile eines Geräts. Die Rohdaten, aus denen es gelernt wurde, bleiben erhalten – eine spätere Profilsuche kann es daher neu anlegen.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Das HAEO-Device-Forecast-Gerät."
+        },
+        "profile_id": {
+          "name": "Profil-ID",
+          "description": "ID des zu löschenden Profils."
+        }
+      }
+    },
+    "preview_profile": {
+      "name": "Profil-Vorschau",
+      "description": "Wählt das Profil aus, dessen Lastkurve der Sensor „Profil-Vorschau“ bereitstellt – auf die aktuelle Uhrzeit gelegt, damit eine Diagramm-Card sie zeichnen kann.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Das HAEO-Device-Forecast-Gerät."
+        },
+        "profile_id": {
+          "name": "Profil-ID",
+          "description": "ID des anzuzeigenden Profils. Leer lassen, um die Vorschau zu leeren."
         }
       }
     }

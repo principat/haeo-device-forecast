@@ -16,8 +16,8 @@ def _device_subentry(name: str, power_entity_id: str) -> dict:
     }
 
 
-async def test_setup_creates_five_entities_per_device_and_unloads_cleanly(hass):
-    """A hub entry with two device subentries exposes 5 entities each, then unloads."""
+async def test_setup_creates_six_sensors_and_a_button_per_device_and_unloads_cleanly(hass):
+    """A hub entry with two device subentries exposes 7 entities each, then unloads."""
     hass.states.async_set("sensor.waschmaschine_power", "0")
     hass.states.async_set("sensor.geschirrspueler_power", "0")
     entry = MockConfigEntry(
@@ -39,14 +39,14 @@ async def test_setup_creates_five_entities_per_device_and_unloads_cleanly(hass):
     entries_for_hub = [
         entity for entity in registry.entities.values() if entity.config_entry_id == entry.entry_id
     ]
-    assert len(entries_for_hub) == 12  # 6 entities (5 sensors + 1 button) x 2 devices
+    assert len(entries_for_hub) == 14  # 7 entities (6 sensors + 1 button) x 2 devices
 
     per_subentry_counts: dict[str, int] = {}
     for entity in entries_for_hub:
         per_subentry_counts[entity.config_subentry_id] = (
             per_subentry_counts.get(entity.config_subentry_id, 0) + 1
         )
-    assert list(per_subentry_counts.values()) == [6, 6]
+    assert list(per_subentry_counts.values()) == [7, 7]
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()

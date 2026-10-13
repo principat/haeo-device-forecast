@@ -17,7 +17,7 @@ from .clustering import (
     merge_run_into_profile,
 )
 from .dtw import CONFIDENCE_MATCH_THRESHOLD, band_aware_dtw_cost, confidence_percent
-from .forecast import build_forecast_points
+from .forecast import build_curve_points, build_forecast_points
 from .segmentation import detect_runs
 
 __all__ = [
@@ -26,6 +26,7 @@ __all__ = [
     "assign_run",
     "band_aware_dtw_cost",
     "build_band",
+    "build_curve_points",
     "build_forecast_points",
     "confidence_percent",
     "create_profile_from_run",

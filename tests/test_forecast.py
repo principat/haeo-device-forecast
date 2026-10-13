@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from custom_components.haeo_device_forecast.analysis.forecast import (
+    build_curve_points,
     build_forecast_points,
 )
 from custom_components.haeo_device_forecast.models import BandBucket, Profile
@@ -55,3 +56,40 @@ def test_forecast_points_empty_when_profile_has_no_buckets() -> None:
     )
 
     assert build_forecast_points(empty_profile, elapsed_seconds=0, grid_seconds=300) == []
+
+
+def test_curve_points_return_full_band_when_below_the_point_limit() -> None:
+    points = build_curve_points(PROFILE, max_points=300)
+
+    assert points == [
+        (0, 0.0, 0.0, 0.0),
+        (300, 60.0, 60.0, 60.0),
+        (600, 100.0, 100.0, 100.0),
+        (900, 10.0, 10.0, 10.0),
+    ]
+
+
+def test_curve_points_downsample_to_the_point_limit_keeping_the_envelope() -> None:
+    points = build_curve_points(PROFILE, max_points=2)
+
+    # Two buckets per window: mean averaged, min/max as the window's envelope.
+    assert points == [(0, 30.0, 0.0, 60.0), (600, 55.0, 10.0, 100.0), (900, 10.0, 10.0, 10.0)]
+
+
+def test_curve_points_always_include_the_profiles_last_bucket() -> None:
+    points = build_curve_points(PROFILE, max_points=1)
+
+    assert points[-1][0] == PROFILE.duration_seconds()
+
+
+def test_curve_points_empty_when_profile_has_no_buckets() -> None:
+    empty_profile = Profile(
+        id="p3",
+        name="Empty",
+        buckets=(),
+        pause_windows=(),
+        created_at=PROFILE.created_at,
+        updated_at=PROFILE.updated_at,
+    )
+
+    assert build_curve_points(empty_profile) == []

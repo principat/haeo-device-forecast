@@ -19,6 +19,7 @@ from custom_components.haeo_device_forecast.sensor import (
     ForecastPowerSensor,
     KnownProfilesSensor,
     ProfileNameSensor,
+    ProfilePreviewSensor,
     StatusSensor,
 )
 from custom_components.haeo_device_forecast.storage import DeviceStore
@@ -116,7 +117,7 @@ async def test_sensors_have_stable_unique_ids_per_device(hass) -> None:
 async def test_sensors_are_namespaced_by_device_to_avoid_cross_device_collisions(
     hass,
 ) -> None:
-    # Specs.md requires supporting ~10 devices at once; without a device
+    # docs/REQUIREMENTS.md requires supporting ~10 devices at once; without a device
     # per config subentry, has_entity_name would collapse every device's
     # "Status" sensor to the same generic entity_id (sensor.status).
     coordinator = await _make_coordinator(hass)
@@ -180,3 +181,63 @@ async def test_known_profiles_sensor_lists_all_learned_profiles(hass) -> None:
     assert profiles_attr[0]["duration_seconds"] == 600
     assert profiles_attr[0]["energy_wh"] == pytest.approx(5.0)
     assert profiles_attr[0]["updated_at"] == "2026-09-02T00:00:00+00:00"
+
+
+def _profile_with_band():
+    from custom_components.haeo_device_forecast.models import BandBucket, Profile
+
+    return Profile(
+        id="p1",
+        name="Eco 50°",
+        buckets=(
+            BandBucket(offset_seconds=0, min=55.0, mean=60.0, max=65.0),
+            BandBucket(offset_seconds=600, min=0.0, mean=0.0, max=2.0),
+        ),
+        pause_windows=(),
+        created_at=datetime(2026, 9, 1, tzinfo=timezone.utc),
+        updated_at=datetime(2026, 9, 2, tzinfo=timezone.utc),
+    )
+
+
+async def test_profile_preview_sensor_is_empty_without_a_selection(hass) -> None:
+    coordinator = await _make_coordinator(hass)
+    coordinator.profiles = [_profile_with_band()]
+
+    sensor = ProfilePreviewSensor(coordinator)
+
+    assert sensor.native_value is None
+    assert sensor.extra_state_attributes["forecast"] == []
+    assert sensor.extra_state_attributes["profile_id"] is None
+
+
+async def test_profile_preview_sensor_exposes_the_selected_profiles_band(hass) -> None:
+    coordinator = await _make_coordinator(hass)
+    coordinator.profiles = [_profile_with_band()]
+    coordinator.async_set_profile_preview("p1")
+
+    sensor = ProfilePreviewSensor(coordinator)
+    attributes = sensor.extra_state_attributes
+
+    assert sensor.native_value == "Eco 50°"
+    assert attributes["profile_id"] == "p1"
+    assert attributes["duration_seconds"] == 600
+    assert [point["value"] for point in attributes["forecast"]] == [60.0, 0.0]
+    assert attributes["forecast"][0]["min"] == 55.0
+    assert attributes["forecast"][0]["max"] == 65.0
+    # The relative band is anchored to wall-clock time, 600 s apart.
+    first = datetime.fromisoformat(attributes["forecast"][0]["time"])
+    last = datetime.fromisoformat(attributes["forecast"][1]["time"])
+    assert (last - first).total_seconds() == 600
+    assert attributes["started_at"] == coordinator.preview_anchor.isoformat()
+
+
+async def test_profile_preview_sensor_clears_when_the_previewed_profile_is_deleted(hass) -> None:
+    coordinator = await _make_coordinator(hass)
+    coordinator.profiles = [_profile_with_band()]
+    coordinator.async_set_profile_preview("p1")
+
+    await coordinator.async_delete_profile("p1")
+
+    sensor = ProfilePreviewSensor(coordinator)
+    assert sensor.native_value is None
+    assert sensor.extra_state_attributes["forecast"] == []
