@@ -1,0 +1,25 @@
+-r requirements_test.txt
+home-assistant-frontend==20260930.3
+playwright==1.63.0
+pytest-playwright
+
+# Requirements of the Home Assistant integrations that onboarding loads in the throwaway test
+# instance. Home Assistant installs missing requirements itself at runtime, but on a fresh
+# environment that takes minutes while onboarding hangs on "Waiting for Home Assistant to finish
+# starting up" and the first page load never leaves "Loading..." - the e2e fixtures then time
+# out. Installing them up front makes the first run as fast as every later one.
+# Versions follow the pinned homeassistant version (see its requirements_all.txt).
+mutagen==1.48.1
+gazetteer-matcher==1.1.0
+hassil==3.12.1
+home-assistant-intents==2026.10.6
+pymicro-vad==1.0.1
+pyspeex-noise==1.0.2
+ha-ffmpeg==3.2.2
+PyTurboJPEG==1.8.3
+av==19.0.0
+PyMetno==0.13.0
+radios==1.0.0
+pycountry==24.6.1
+infrared-protocols==10.1.0
+rf-protocols==4.3.0

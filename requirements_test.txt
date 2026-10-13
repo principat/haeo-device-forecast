@@ -1,5 +1,8 @@
-pytest
+homeassistant==2026.10.1
+pytest-homeassistant-custom-component==0.13.372
 pytest-asyncio
 pytest-cov
-pytest-homeassistant-custom-component
 ruff
+# Requirement of the integration itself (manifest.json); version follows the pinned
+# homeassistant's package_constraints.txt.
+numpy==2.3.2

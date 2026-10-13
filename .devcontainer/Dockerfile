@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/python:1-3.13-bookworm
+FROM mcr.microsoft.com/devcontainers/python:3-3.14-bookworm
 
 # Das Basis-Image bringt ein vorkonfiguriertes yarnpkg-APT-Repo mit, dessen
 # GPG-Key nicht mehr auflösbar ist (NO_PUBKEY 62D54FD4003F6525). Das lässt

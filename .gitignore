@@ -18,3 +18,6 @@ htmlcov/
 # Claude Code (local/session-specific; .claude/settings.json is tracked)
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+
+# Screenshots of the browser e2e tests (uploaded by CI)
+tests_e2e/screenshots/

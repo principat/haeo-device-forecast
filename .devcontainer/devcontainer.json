@@ -41,11 +41,14 @@
         "ms-python.python",
         "ms-python.vscode-pylance",
         "charliermarsh.ruff",
-        "redhat.vscode-yaml"
+        "redhat.vscode-yaml",
+        "wmaurer.change-case",
+        "Anthropic.claude-code"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python",
         "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false,
         "python.testing.pytestArgs": ["tests"]
       }
     }
