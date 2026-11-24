@@ -67,3 +67,8 @@ preview_profile:
       required: false
       selector:
         text:
+    profile_ids:
+      required: false
+      selector:
+        text:
+          multiple: true

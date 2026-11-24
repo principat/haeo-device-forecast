@@ -27,6 +27,7 @@ from .analysis import build_curve_points
 from .const import DOMAIN
 from .coordinator import DeviceForecastCoordinator
 from .entity import DeviceForecastEntity
+from .models.profile import Profile
 
 
 async def async_setup_entry(
@@ -217,20 +218,32 @@ class ProfilePreviewSensor(_DeviceForecastEntity):
                 "duration_seconds": None,
                 "energy_wh": None,
                 "forecast": [],
+                "source_profiles": [],
             }
 
-        return {
-            "profile_id": profile.id,
-            "started_at": anchor.isoformat(),
-            "duration_seconds": profile.duration_seconds(),
-            "energy_wh": profile.total_energy_wh(),
-            "forecast": [
+        def points(source: Profile) -> list[dict[str, Any]]:
+            return [
                 {
                     "time": (anchor + timedelta(seconds=offset)).isoformat(),
                     "value": mean,
                     "min": minimum,
                     "max": maximum,
                 }
-                for offset, mean, minimum, maximum in build_curve_points(profile)
+                for offset, mean, minimum, maximum in build_curve_points(source)
+            ]
+
+        merging = self.coordinator.preview_merged is not None
+        return {
+            # A merge preview is not a saved profile yet, so it has no id.
+            "profile_id": None if merging else profile.id,
+            "started_at": anchor.isoformat(),
+            "duration_seconds": profile.duration_seconds(),
+            "energy_wh": profile.total_energy_wh(),
+            "forecast": points(profile),
+            # Merge preview only: the profiles being merged, to draw faded/dotted
+            # next to the result in ``forecast``.
+            "source_profiles": [
+                {"profile_id": source.id, "name": source.name, "forecast": points(source)}
+                for source in self.coordinator.preview_sources
             ],
         }

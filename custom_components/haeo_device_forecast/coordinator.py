@@ -137,6 +137,9 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
         self.status = STATUS_SLEEPING
         self.preview_profile_id: str | None = None
         self.preview_anchor: datetime | None = None
+        #: Merge preview: the unsaved merge result and the profiles it merges.
+        self.preview_merged: Profile | None = None
+        self.preview_sources: list[Profile] = []
 
         self._store = store
         self._current_run_samples: list[RawSample] = []
@@ -187,13 +190,13 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
             raise ValueError(f"Unknown profile id: {profile_id}")
 
         self.profiles = [profile for profile in self.profiles if profile.id != profile_id]
-        if self.preview_profile_id == profile_id:
-            self.preview_profile_id = None
-            self.preview_anchor = None
+        self._prune_preview()
         await self._store.async_save_profiles(self.profiles)
         self.async_update_listeners()
 
-    def async_set_profile_preview(self, profile_id: str | None) -> None:
+    def async_set_profile_preview(
+        self, profile_id: str | None, merge_profile_ids: list[str] | None = None
+    ) -> None:
         """Select the profile whose load curve the preview sensor exposes.
 
         Per docs/REQUIREMENTS.md "Dashboard": the preview anchors the profile's
@@ -201,24 +204,50 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
         standard time-axis chart card can draw it. The selection is
         presentation state only and is deliberately not persisted.
 
+        With ``merge_profile_ids`` (two or more ids) the preview is a dry run
+        of :meth:`async_merge_profiles`: the main curve is the merge result
+        and the source profiles are kept as :attr:`preview_sources` so they
+        can be drawn alongside it. Nothing is changed in the profile list.
+
         Args:
             profile_id: Id of the profile to preview, or ``None`` to clear.
+                Ignored if ``merge_profile_ids`` is given.
+            merge_profile_ids: Ids of profiles whose merge result to preview.
 
         Raises:
-            ValueError: If ``profile_id`` is not ``None`` and unknown.
+            ValueError: If an id is unknown.
         """
-        if profile_id is not None and not any(
-            profile.id == profile_id for profile in self.profiles
-        ):
-            raise ValueError(f"Unknown profile id: {profile_id}")
-
-        self.preview_profile_id = profile_id
-        self.preview_anchor = dt_util.utcnow() if profile_id is not None else None
+        # Validate first so a bad id keeps the last good preview.
+        if merge_profile_ids:
+            ids = list(dict.fromkeys(merge_profile_ids))
+            sources = [profile for profile in self.profiles if profile.id in ids]
+            if len(sources) != len(ids):
+                raise ValueError("One or more profile ids not found")
+            self._clear_preview()
+            self.preview_sources = sources
+            self.preview_merged = merge_profile_bands(
+                sources, " + ".join(profile.name for profile in sources)
+            )
+            self.preview_anchor = dt_util.utcnow()
+        else:
+            if profile_id is not None and not any(
+                profile.id == profile_id for profile in self.profiles
+            ):
+                raise ValueError(f"Unknown profile id: {profile_id}")
+            self._clear_preview()
+            if profile_id is not None:
+                self.preview_profile_id = profile_id
+                self.preview_anchor = dt_util.utcnow()
         self.async_update_listeners()
 
     @property
     def preview_profile(self) -> Profile | None:
-        """The profile currently selected for preview, if any."""
+        """The profile currently selected for preview, if any.
+
+        In a merge preview this is the (unsaved) merge result.
+        """
+        if self.preview_merged is not None:
+            return self.preview_merged
         return next(
             (profile for profile in self.profiles if profile.id == self.preview_profile_id),
             None,
@@ -243,17 +272,37 @@ class DeviceForecastCoordinator(DataUpdateCoordinator[DeviceForecastData]):
             raise ValueError("One or more profile ids not found")
 
         merged = merge_profile_bands(to_merge, name)
+        previewing_this_merge = (
+            self.preview_merged is not None
+            and {profile.id for profile in self.preview_sources} == ids
+        )
         self.profiles = [profile for profile in self.profiles if profile.id not in ids] + [merged]
+        if previewing_this_merge:
+            # The previewed merge became real: keep showing it, now as a saved profile.
+            anchor = self.preview_anchor
+            self._clear_preview()
+            self.preview_profile_id = merged.id
+            self.preview_anchor = anchor
         self._prune_preview()
         await self._store.async_save_profiles(self.profiles)
         self.async_update_listeners()
         return merged
 
+    def _clear_preview(self) -> None:
+        """Reset the whole preview selection (single profile or merge preview)."""
+        self.preview_profile_id = None
+        self.preview_anchor = None
+        self.preview_merged = None
+        self.preview_sources = []
+
     def _prune_preview(self) -> None:
-        """Clear the preview selection if its profile no longer exists."""
-        if self.preview_profile_id is not None and self.preview_profile is None:
-            self.preview_profile_id = None
-            self.preview_anchor = None
+        """Clear the preview selection if a profile it shows no longer exists."""
+        known = {profile.id for profile in self.profiles}
+        if self.preview_merged is not None:
+            if any(profile.id not in known for profile in self.preview_sources):
+                self._clear_preview()
+        elif self.preview_profile_id is not None and self.preview_profile_id not in known:
+            self._clear_preview()
 
     async def async_search_profiles(self) -> list[Profile]:
         """Re-run automatic profile discovery over the device's full raw-sample history.

@@ -142,6 +142,10 @@
         "profile_id": {
           "name": "Profile ID",
           "description": "ID of the profile to preview. Leave empty to clear the preview."
+        },
+        "profile_ids": {
+          "name": "Profile IDs",
+          "description": "Two or more profile IDs: previews the result of merging them (dry run, nothing is changed) – the \"Profile preview\" sensor then also lists the source profiles."
         }
       }
     }

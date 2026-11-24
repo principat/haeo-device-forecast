@@ -142,6 +142,10 @@
         "profile_id": {
           "name": "Profil-ID",
           "description": "ID des anzuzeigenden Profils. Leer lassen, um die Vorschau zu leeren."
+        },
+        "profile_ids": {
+          "name": "Profil-IDs",
+          "description": "Zwei oder mehr Profil-IDs: zeigt das Ergebnis der Zusammenführung als Vorschau (Probelauf, es wird nichts geändert) – der Sensor „Profil-Vorschau“ listet dann zusätzlich die Quellprofile auf."
         }
       }
     }

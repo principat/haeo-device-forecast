@@ -107,3 +107,60 @@ content: |
 
 Praktisch ist eine Automation, die `preview_profile` bei jeder Änderung einer `input_select` mit
 den Profil-IDs aufruft – dann wechselt das Diagramm direkt mit der Auswahl im Dashboard.
+
+## Zusammenführung vorab ansehen
+
+Vor dem Zusammenführen kann `preview_profile` zeigen, was dabei herauskäme. Dazu `profile_ids`
+(zwei oder mehr) statt `profile_id` übergeben – es wird nichts verändert, es ist ein Probelauf von
+`merge_profiles`:
+
+```yaml
+action: haeo_device_forecast.preview_profile
+data:
+  device_id: <Gerät der Waschmaschine>
+  profile_ids:
+    - <ID 1>
+    - <ID 2>
+```
+
+Das Attribut `forecast` des Sensors "Profil-Vorschau" enthält dann das **Ergebnis der
+Zusammenführung**, das Attribut `source_profiles` die zusammengeführten Profile (`profile_id`,
+`name`, `forecast`). Die Quellen lassen sich blass oder gepunktet neben dem Ergebnis zeichnen, z. B.
+mit [apexcharts-card](https://github.com/RomRider/apexcharts-card) (Custom Card, über HACS
+installierbar):
+
+```yaml
+type: custom:apexcharts-card
+header:
+  show: true
+  title: Vorschau Zusammenführung
+span:
+  start: minute
+graph_span: 3h
+series:
+  - entity: sensor.waschmaschine_profil_vorschau
+    name: Ergebnis
+    type: line
+    stroke_width: 3
+    data_generator: |
+      return entity.attributes.forecast.map(p => [new Date(p.time).getTime(), p.value]);
+  - entity: sensor.waschmaschine_profil_vorschau
+    name: Quelle 1
+    type: line
+    stroke_width: 1
+    opacity: 0.4
+    data_generator: |
+      const s = entity.attributes.source_profiles[0];
+      return s ? s.forecast.map(p => [new Date(p.time).getTime(), p.value]) : [];
+  - entity: sensor.waschmaschine_profil_vorschau
+    name: Quelle 2
+    type: line
+    stroke_width: 1
+    opacity: 0.4
+    data_generator: |
+      const s = entity.attributes.source_profiles[1];
+      return s ? s.forecast.map(p => [new Date(p.time).getTime(), p.value]) : [];
+```
+
+Führst du danach `merge_profiles` mit genau diesen Profilen aus, zeigt die Vorschau weiter das
+gespeicherte Ergebnis (`source_profiles` ist dann leer, weil die Quellen nicht mehr existieren).

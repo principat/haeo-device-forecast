@@ -27,6 +27,7 @@ use.
   `delete_profile`, `search_profiles`) and a "Search for new profiles" button per device
 - A profile's load curve as a chart: `preview_profile` puts the selected profile's band on
   the "Profile preview" sensor, anchored to the current time
+  – with `profile_ids` it previews a merge (result plus the source profiles) before you commit to it
 - Several appliances in one integration entry, each added as its own device
 - English and German UI
 
@@ -98,6 +99,7 @@ wird eine 5-Minuten-Prognose erzeugt, die u. a. für
   `delete_profile`, `search_profiles`) und einen Button "Nach neuen Profilen suchen" je Gerät
 - Lastkurve eines Profils als Diagramm: `preview_profile` legt das Band des gewählten Profils
   auf den Sensor "Profil-Vorschau", bezogen auf die aktuelle Uhrzeit
+  – mit `profile_ids` als Vorschau einer Zusammenführung (Ergebnis plus Quellprofile), bevor sie ausgeführt wird
 - Mehrere Geräte in einem Integrationseintrag, jedes als eigenes Gerät angelegt
 - Oberfläche auf Deutsch und Englisch
 

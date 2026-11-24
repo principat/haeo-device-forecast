@@ -228,3 +228,29 @@ async def test_preview_profile_service_raises_for_unknown_profile(hass) -> None:
         )
 
     assert coordinator.preview_profile_id is None
+
+
+async def test_preview_profile_service_previews_a_merge(hass) -> None:
+    entry, subentry_id, device_id = await _setup_entry_with_device(hass)
+    coordinator = hass.data[DOMAIN][entry.entry_id][subentry_id]
+    coordinator.profiles = [_profile("a", "A"), _profile("b", "B")]
+    async_register_services(hass)
+
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_PREVIEW_PROFILE,
+        {ATTR_DEVICE_ID: device_id, ATTR_PROFILE_IDS: ["a", "b"]},
+        blocking=True,
+    )
+
+    assert [profile.id for profile in coordinator.preview_sources] == ["a", "b"]
+    assert coordinator.preview_merged is not None
+    assert [profile.id for profile in coordinator.profiles] == ["a", "b"]
+
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            DOMAIN,
+            SERVICE_PREVIEW_PROFILE,
+            {ATTR_DEVICE_ID: device_id, ATTR_PROFILE_IDS: ["a", "nope"]},
+            blocking=True,
+        )

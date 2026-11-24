@@ -241,3 +241,63 @@ async def test_profile_preview_sensor_clears_when_the_previewed_profile_is_delet
     sensor = ProfilePreviewSensor(coordinator)
     assert sensor.native_value is None
     assert sensor.extra_state_attributes["forecast"] == []
+
+
+def _second_profile_with_band():
+    from dataclasses import replace
+
+    from custom_components.haeo_device_forecast.models import BandBucket
+
+    return replace(
+        _profile_with_band(),
+        id="p2",
+        name="Eco 40°",
+        buckets=(
+            BandBucket(offset_seconds=0, min=35.0, mean=40.0, max=45.0),
+            BandBucket(offset_seconds=600, min=0.0, mean=0.0, max=1.0),
+        ),
+    )
+
+
+async def test_profile_preview_sensor_shows_merge_result_and_sources(hass) -> None:
+    coordinator = await _make_coordinator(hass)
+    coordinator.profiles = [_profile_with_band(), _second_profile_with_band()]
+    coordinator.async_set_profile_preview(None, ["p1", "p2"])
+
+    attributes = ProfilePreviewSensor(coordinator).extra_state_attributes
+
+    # The merge result (mean of means, union of bands) is the main curve ...
+    assert attributes["profile_id"] is None
+    assert attributes["forecast"][0]["value"] == 50.0
+    assert attributes["forecast"][0]["min"] == 35.0
+    assert attributes["forecast"][0]["max"] == 65.0
+    # ... and both sources are exposed alongside, on the same time axis.
+    sources = attributes["source_profiles"]
+    assert [source["profile_id"] for source in sources] == ["p1", "p2"]
+    assert [source["forecast"][0]["value"] for source in sources] == [60.0, 40.0]
+    assert sources[0]["forecast"][0]["time"] == attributes["forecast"][0]["time"]
+    # A dry run: the profile list is untouched.
+    assert [profile.id for profile in coordinator.profiles] == ["p1", "p2"]
+
+
+async def test_merge_preview_turns_into_the_saved_profile_after_merging(hass) -> None:
+    coordinator = await _make_coordinator(hass)
+    coordinator.profiles = [_profile_with_band(), _second_profile_with_band()]
+    coordinator.async_set_profile_preview(None, ["p1", "p2"])
+
+    merged = await coordinator.async_merge_profiles(["p1", "p2"], "Eco")
+
+    attributes = ProfilePreviewSensor(coordinator).extra_state_attributes
+    assert attributes["profile_id"] == merged.id
+    assert attributes["source_profiles"] == []
+    assert attributes["forecast"][0]["value"] == 50.0
+
+
+async def test_merge_preview_clears_when_a_source_is_deleted(hass) -> None:
+    coordinator = await _make_coordinator(hass)
+    coordinator.profiles = [_profile_with_band(), _second_profile_with_band()]
+    coordinator.async_set_profile_preview(None, ["p1", "p2"])
+
+    await coordinator.async_delete_profile("p2")
+
+    assert ProfilePreviewSensor(coordinator).extra_state_attributes["forecast"] == []

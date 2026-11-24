@@ -63,6 +63,8 @@ _PREVIEW_PROFILE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_DEVICE_ID): cv.string,
         vol.Optional(ATTR_PROFILE_ID): cv.string,
+        # Dry run of merge_profiles: preview the merge result plus its sources.
+        vol.Optional(ATTR_PROFILE_IDS): vol.All(cv.ensure_list, [cv.string], vol.Length(min=2)),
     }
 )
 
@@ -131,7 +133,9 @@ def async_register_services(hass: HomeAssistant) -> None:
     async def handle_preview_profile(call: ServiceCall) -> None:
         coordinator = _get_coordinator(hass, call.data[ATTR_DEVICE_ID])
         try:
-            coordinator.async_set_profile_preview(call.data.get(ATTR_PROFILE_ID) or None)
+            coordinator.async_set_profile_preview(
+                call.data.get(ATTR_PROFILE_ID) or None, call.data.get(ATTR_PROFILE_IDS)
+            )
         except ValueError as err:
             raise ServiceValidationError(str(err)) from err
 
